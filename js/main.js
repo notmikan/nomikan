@@ -13,10 +13,12 @@ window.switchTab = function(tabName) {
 
   const homeTab = document.getElementById('homeTab');
   const timetableTab = document.getElementById('timetableTab');
+  const inventoryTab = document.getElementById('inventoryTab');
   const placeholderTab = document.getElementById('placeholderTab');
 
   if (homeTab) homeTab.classList.remove('active');
   if (timetableTab) timetableTab.classList.remove('active');
+  if (inventoryTab) inventoryTab.classList.remove('active');
   if (placeholderTab) placeholderTab.classList.remove('active');
 
   // 浮遊投稿ボタン (FAB) はホームタブの時だけ表示
@@ -29,22 +31,11 @@ window.switchTab = function(tabName) {
     if (homeTab) homeTab.classList.add('active');
   } else if (tabName === 'timetable') {
     if (timetableTab) timetableTab.classList.add('active');
+  } else if (tabName === 'inventory') {
+    if (inventoryTab) inventoryTab.classList.add('active');
   } else {
     if (placeholderTab) {
       placeholderTab.classList.add('active');
-      const iconMap = {
-        budget: '💰',
-        inventory: '📦'
-      };
-      const titleMap = {
-        budget: '予算 ＆ 資材発注管理モジュール',
-        inventory: '部品・資材・工具 在庫管理モジュール'
-      };
-
-      const pIcon = document.getElementById('placeholderIcon');
-      const pTitle = document.getElementById('placeholderTitle');
-      if (pIcon) pIcon.textContent = iconMap[tabName] || '⚙️';
-      if (pTitle) pTitle.textContent = titleMap[tabName] || 'モジュール準備中';
     }
   }
 };

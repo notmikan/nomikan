@@ -244,7 +244,7 @@
   left: 15%;
   width: 70%;
   height: 3px;
-  background: #4f46e5;
+  background: #0f172a;
   border-radius: 3px 3px 0 0;
 }
 
@@ -387,14 +387,24 @@
   transition: transform 0.15s;
 }
 
-/* 💬 リプライ（返信）スレッド表示エリア */
-.x-replies-container {
+/* 💬 リプライ（返信）スレッド表示エリア ＆ 返信セクション */
+.x-replies-section {
+  display: none;
+  flex-direction: column;
   margin-top: 10px;
-  padding-left: 10px;
-  border-left: 2px solid #e2e8f0;
+  padding-left: 12px;
+  border-left: 2px solid #cbd5e1;
+}
+
+.x-replies-section.active {
+  display: flex;
+}
+
+.x-replies-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 4px;
 }
 
 .x-reply-item {
@@ -437,7 +447,7 @@
   word-break: break-word;
 }
 
-/* 返信入力フォーム */
+/* 返信入力フォーム (💬ボタンクリック時だけ最下部に出現) */
 .x-reply-input-box {
   display: none;
   margin-top: 8px;
@@ -464,7 +474,7 @@
 }
 
 .btn-reply-send {
-  background: #4f46e5;
+  background: #0f172a;
   color: #ffffff;
   border: none;
   border-radius: 20px;
@@ -604,5 +614,111 @@
   font-size: 24px;
   background: transparent;
   border: none;
+  cursor: pointer;
+}
+
+/* 🤖 右側スタイリッシュ AI ミニボタン ＆ 詳細ポップオーバー */
+.ai-badge-container {
+  position: relative;
+  margin-left: auto;
+  display: inline-block;
+}
+
+.ai-mini-badge-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-mini-badge-btn:hover {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.ai-mini-badge-btn.auto {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.ai-mini-badge-btn.auto:hover {
+  background: #166534;
+  color: #ffffff;
+}
+
+.ai-mini-badge-btn.proposal {
+  background: #fffbebfb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.ai-detail-popover {
+  position: absolute;
+  bottom: 28px;
+  right: 0;
+  width: 240px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+  padding: 12px;
+  z-index: 100;
+  font-size: 12px;
+  color: #0f172a;
+  text-align: left;
+}
+
+.ai-pop-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.ai-pop-item {
+  font-size: 12px;
+  color: #334155;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.ai-pop-revert-btn {
+  width: 100%;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ai-pop-revert-btn:hover {
+  background: #fee2e2;
+}
+
+.ai-pop-apply-btn {
+  width: 100%;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
 }

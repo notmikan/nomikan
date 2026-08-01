@@ -120,70 +120,80 @@ function renderCompact(filteredTasks) {
   grid.innerHTML = html;
 }
 
-// 【各班詳細・検索モード】 (見やすい月別カードリスト表示)
+// 【各班詳細・検索モード】 (時系列昇順ソート＆スマートカード表示)
 function renderDetailed(filteredTasks) {
   const grid = document.getElementById('ganttGrid');
   if (!grid) return;
-
-  const months = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7];
 
   if (filteredTasks.length === 0) {
     grid.innerHTML = `
       <div class="placeholder-card" style="margin: 20px 0; padding: 30px;">
         <div class="placeholder-icon">🔍</div>
         <h2>該当するタスクが見つかりませんでした</h2>
-        <p>検索条件を変更するか、右上の「➕ タスク追加」から新しく追加してください。</p>
+        <p>検索条件を変更するか、右上の「＋ タスク追加」から新しく追加してください。</p>
       </div>
     `;
     return;
   }
 
-  let html = `<div class="team-cards-grid">`;
+  // 開始月（または日付）の早い順に時系列昇順ソート (重複なし)
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const sA = monthToIndex(a.start);
+    const sB = monthToIndex(b.start);
+    if (sA !== sB) return sA - sB;
+    return monthToIndex(a.end) - monthToIndex(b.end);
+  });
 
-  months.forEach(m => {
-    const mIdx = monthToIndex(m);
-    const monthTasks = filteredTasks.filter(t => {
-      const sIdx = monthToIndex(t.start);
-      const eIdx = monthToIndex(t.end);
-      return mIdx >= sIdx && mIdx <= eIdx;
-    });
+  let html = `<div class="task-cards-grid">`;
 
-    if (monthTasks.length === 0) return;
+  sortedTasks.forEach(task => {
+    const teamName = normalizeTeam(task.team);
+    
+    // 期間表示テキスト
+    const dateText = (task.startDate && task.endDate)
+      ? `${formatDateShort(task.startDate)} 〜 ${formatDateShort(task.endDate)}`
+      : `${task.start}月 〜 ${task.end}月`;
 
-    html += `
-      <div class="month-card-section">
-        <div class="month-card-header">
-          <span class="month-card-title">🗓️ ${m}月</span>
-          <span class="month-card-count">${monthTasks.length}件のタスク</span>
-        </div>
-        <div class="month-card-list">
-    `;
+    // ToDoリストから進捗率(%)を動的計算 (または手動設定値)
+    const todos = task.todos || [];
+    let progress = typeof task.progress === 'number' ? task.progress : 0;
+    if (todos.length > 0) {
+      const completedCount = todos.filter(t => t.completed).length;
+      progress = Math.round((completedCount / todos.length) * 100);
+    }
 
-    monthTasks.forEach(task => {
-      const dateText = (task.startDate && task.endDate)
-        ? `📅 ${formatDateShort(task.startDate)} 〜 ${formatDateShort(task.endDate)}`
-        : `${task.start}月 〜 ${task.end}月`;
-
-      html += `
-        <div class="task-detail-card team-border-${task.team}">
-          <div class="card-top-row">
-            <span class="badge badge-${task.team}">${task.team}班</span>
-            <span class="card-duration-badge">${dateText}</span>
-          </div>
-          <div class="card-task-title" onclick="openEditModalById('${task.id}')">${task.name}</div>
-          <div class="card-meta-row">
-            <span class="card-assignee">👤 ${task.assignee}</span>
-            ${task.note ? `<span class="card-note" title="${task.note}">📝 ${task.note}</span>` : ''}
-          </div>
-          <div class="card-action-row">
-            <button class="btn-card-action" onclick="openEditModalById('${task.id}')">✏️ 編集</button>
-            <button class="btn-card-action delete" onclick="deleteTaskById('${task.id}')">🗑️ 削除</button>
-          </div>
-        </div>
-      `;
-    });
+    let statusClass = 'in-progress';
+    let statusLabel = `⚡ 進行中 (${progress}%)`;
+    if (progress === 100) {
+      statusClass = 'completed';
+      statusLabel = '✓ 完了';
+    } else if (progress === 0) {
+      statusClass = 'not-started';
+      statusLabel = '未着手';
+    }
 
     html += `
+      <div class="task-detail-card team-border-${teamName}" onclick="openEditModalById('${task.id}')" title="クリックして詳細・作業手順">
+        <div class="card-header-row">
+          <div class="card-task-title">${escapeHtml(task.name)}</div>
+          <span class="card-duration-tag">${dateText}</span>
+        </div>
+        
+        <div class="card-meta-info">
+          <span class="card-assignee-text">
+            <span class="badge badge-${teamName}">${teamName}班</span>
+            <span>👤 ${escapeHtml(task.assignee)}</span>
+          </span>
+          <span class="status-badge ${statusClass}">${statusLabel}</span>
+        </div>
+
+        ${task.note ? `<div style="font-size: 11px; color: #b45309; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px;">📝 ${escapeHtml(task.note)}</div>` : ''}
+
+        <!-- 📊 進捗プログレスメーター -->
+        <div class="card-progress-container">
+          <div class="card-progress-bar-bg">
+            <div class="card-progress-bar-fill" style="width: ${progress}%;"></div>
+          </div>
         </div>
       </div>
     `;
@@ -192,6 +202,65 @@ function renderDetailed(filteredTasks) {
   html += `</div>`;
   grid.innerHTML = html;
 }
+
+// ✅ タスク内 ToDo リスト管理ロジック
+let currentTaskTodos = [];
+
+function renderTodoList() {
+  const container = document.getElementById('todoListContainer');
+  const progressText = document.getElementById('taskProgressValueText');
+  if (!container) return;
+
+  if (currentTaskTodos.length === 0) {
+    container.innerHTML = `<div style="font-size: 12px; color: #94a3b8; text-align: center; padding: 24px 10px;">ToDoを追加できます</div>`;
+    if (progressText) progressText.textContent = `進捗 0%`;
+    return;
+  }
+
+  const completedCount = currentTaskTodos.filter(t => t.completed).length;
+  const calculatedProgress = Math.round((completedCount / currentTaskTodos.length) * 100);
+  if (progressText) progressText.textContent = `進捗 ${calculatedProgress}% (${completedCount}/${currentTaskTodos.length})`;
+
+  container.innerHTML = currentTaskTodos.map((todo, idx) => `
+    <div class="todo-item-row ${todo.completed ? 'completed' : ''}">
+      <div class="todo-item-left" onclick="toggleTodoItem(${idx})">
+        <input type="checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodoItem(${idx});">
+        <span>${escapeHtml(todo.text)}</span>
+      </div>
+      <button type="button" class="todo-delete-btn" onclick="deleteTodoItem(${idx})">✕</button>
+    </div>
+  `).join('');
+}
+
+window.toggleTodoItem = function(idx) {
+  if (currentTaskTodos[idx]) {
+    currentTaskTodos[idx].completed = !currentTaskTodos[idx].completed;
+    renderTodoList();
+  }
+};
+
+window.deleteTodoItem = function(idx) {
+  currentTaskTodos.splice(idx, 1);
+  renderTodoList();
+};
+
+document.getElementById('addTodoBtn')?.addEventListener('click', () => {
+  const input = document.getElementById('newTodoInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  currentTaskTodos.push({ id: 'todo_' + Date.now(), text: text, completed: false });
+  input.value = '';
+  renderTodoList();
+});
+
+document.getElementById('newTodoInput')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('addTodoBtn')?.click();
+  }
+});
 
 // フィルタボタン イベント登録
 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -226,6 +295,8 @@ document.getElementById('addBtn')?.addEventListener('click', () => {
   document.getElementById('taskId').value = '';
   document.getElementById('taskStartDate').value = '';
   document.getElementById('taskEndDate').value = '';
+  currentTaskTodos = [];
+  renderTodoList();
   if (enableSpecificDateCheckbox) enableSpecificDateCheckbox.checked = false;
   if (specificDateContainer) specificDateContainer.style.display = 'none';
   document.getElementById('modalTitle').textContent = 'タスク追加';
@@ -248,13 +319,14 @@ document.getElementById('taskEndDate')?.addEventListener('change', (e) => {
   }
 });
 
-document.getElementById('closeModal')?.addEventListener('click', () => {
+function closeTaskModal() {
   if (taskModal) taskModal.classList.remove('active');
-});
+  document.getElementById('taskForm')?.reset();
+  currentTaskTodos = [];
+}
 
-document.getElementById('cancelBtn')?.addEventListener('click', () => {
-  if (taskModal) taskModal.classList.remove('active');
-});
+document.getElementById('closeModal')?.addEventListener('click', closeTaskModal);
+document.getElementById('cancelBtn')?.addEventListener('click', closeTaskModal);
 
 window.openEditModalById = function(id) {
   const task = currentTasks.find(t => t.id === id);
@@ -267,6 +339,9 @@ window.openEditModalById = function(id) {
   document.getElementById('taskStartDate').value = task.startDate || '';
   document.getElementById('taskEndDate').value = task.endDate || '';
 
+  currentTaskTodos = task.todos ? JSON.parse(JSON.stringify(task.todos)) : [];
+  renderTodoList();
+
   const hasSpecificDate = Boolean(task.startDate || task.endDate);
   if (enableSpecificDateCheckbox) enableSpecificDateCheckbox.checked = hasSpecificDate;
   if (specificDateContainer) specificDateContainer.style.display = hasSpecificDate ? 'flex' : 'none';
@@ -275,7 +350,7 @@ window.openEditModalById = function(id) {
   document.getElementById('taskEnd').value = task.end;
   document.getElementById('taskNote').value = task.note || '';
 
-  document.getElementById('modalTitle').textContent = 'タスク編集';
+  document.getElementById('modalTitle').textContent = 'タスク詳細';
   document.getElementById('deleteModalBtn').style.display = 'inline-flex';
   taskModal.classList.add('active');
 };
@@ -292,6 +367,11 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
   const name = document.getElementById('taskName').value.trim();
   const assignee = document.getElementById('taskAssignee').value.trim();
 
+  const completedCount = currentTaskTodos.filter(t => t.completed).length;
+  const calculatedProgress = currentTaskTodos.length > 0 
+    ? Math.round((completedCount / currentTaskTodos.length) * 100) 
+    : 0;
+
   const useSpecificDate = enableSpecificDateCheckbox ? enableSpecificDateCheckbox.checked : false;
   const startDate = useSpecificDate ? document.getElementById('taskStartDate').value : '';
   const endDate = useSpecificDate ? document.getElementById('taskEndDate').value : '';
@@ -301,7 +381,7 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
   const note = document.getElementById('taskNote').value.trim();
 
   const existingIndex = currentTasks.findIndex(t => t.id === id);
-  const updatedTask = { id, team, name, assignee, startDate, endDate, start, end, note };
+  const updatedTask = { id, team, name, assignee, progress: calculatedProgress, todos: [...currentTaskTodos], startDate, endDate, start, end, note };
 
   let newTasks = [...currentTasks];
   if (existingIndex >= 0) {
@@ -310,6 +390,66 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
     newTasks.push(updatedTask);
   }
 
+  currentTasks = newTasks;
   saveTasks(newTasks);
-  if (taskModal) taskModal.classList.remove('active');
+  closeTaskModal();
 });
+
+// 🤖 AI連動による ToDo チェック ＆ 動的追加 API (完了 / 未完了進行中トグル対応)
+window.addOrCheckTodoByAi = function(taskId, todoText, isCompleted = true) {
+  if (!taskId || !todoText) return null;
+  const index = currentTasks.findIndex(t => t.id == taskId);
+  if (index < 0) return null;
+
+  const task = currentTasks[index];
+  let todos = Array.isArray(task.todos) ? [...task.todos] : [];
+  
+  let existingIndex = todos.findIndex(t => t.text.includes(todoText) || todoText.includes(t.text));
+  let isNew = false;
+
+  if (existingIndex >= 0) {
+    if (isCompleted) {
+      todos[existingIndex].completed = true;
+    }
+  } else {
+    todos.push({ text: todoText, completed: isCompleted });
+    isNew = true;
+  }
+
+  const completedCount = todos.filter(t => t.completed).length;
+  const progressPercent = todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : (task.progress || 0);
+
+  currentTasks[index] = {
+    ...task,
+    todos: todos,
+    progress: progressPercent
+  };
+
+  saveTasks(currentTasks);
+  return { taskId: task.id, taskName: task.name, isNew: isNew, isCompleted: isCompleted, progress: progressPercent };
+};
+
+// 🤖 AI連動の取り消し API
+window.revertAiTaskUpdate = function(taskId, todoText) {
+  const index = currentTasks.findIndex(t => t.id === taskId);
+  if (index < 0) return;
+
+  const task = currentTasks[index];
+  let todos = Array.isArray(task.todos) ? [...task.todos] : [];
+
+  let existingIndex = todos.findIndex(t => t.text === todoText);
+  if (existingIndex >= 0) {
+    todos[existingIndex].completed = false;
+  }
+
+  const completedCount = todos.filter(t => t.completed).length;
+  const progressPercent = todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : 0;
+
+  currentTasks[index] = {
+    ...task,
+    todos: todos,
+    progress: progressPercent
+  };
+
+  saveTasks(currentTasks);
+};

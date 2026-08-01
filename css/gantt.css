@@ -183,139 +183,165 @@
   flex-shrink: 0;
 }
 
-/* 各班詳細モード用 月別カードリスト スタイル */
-.team-cards-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 8px 0;
-}
-
-.month-card-section {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04);
-}
-
-.month-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #f1f5f9;
-}
-
-.month-card-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.month-card-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.month-card-list {
+/* 各班詳細モード用 時系列カードボード スタイル */
+.task-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 8px 0;
 }
 
 .task-detail-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-left: 5px solid var(--primary-color);
-  border-radius: 10px;
-  padding: 14px;
-  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
-  transition: transform 0.15s, box-shadow 0.15s;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  cursor: pointer;
+  position: relative;
 }
 
 .task-detail-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px -2px rgba(15, 23, 42, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.1);
+  border-color: #cbd5e1;
 }
 
-.team-border-全体 { border-left-color: var(--color-all); }
+.team-border-全体, .team-border-運営 { border-left-color: var(--color-all); }
 .team-border-FRP { border-left-color: var(--color-frp); }
 .team-border-翼 { border-left-color: var(--color-wing); }
 .team-border-コクピ { border-left-color: var(--color-cockpit); }
 .team-border-電装 { border-left-color: var(--color-elec); }
 
-.card-top-row {
+.card-header-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.card-duration-badge {
+.card-task-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.card-duration-tag {
   font-size: 11px;
   font-weight: 700;
   color: #475569;
   background: #f1f5f9;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.card-task-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 10px;
-  line-height: 1.4;
-  cursor: pointer;
-}
-
-.card-task-title:hover { color: #6366f1; }
-
-.card-meta-row {
+.card-meta-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   font-size: 12px;
   color: #64748b;
-  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 
-.card-note {
-  background: #fffbeb;
-  color: #b45309;
+.card-assignee-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+/* 📊 進捗プログレスメーター */
+.card-progress-container {
+  margin-top: 10px;
+}
+
+.card-progress-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: #f1f5f9;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.card-progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #334155;
+  transition: width 0.3s ease;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  border-radius: 10px;
+  display: inline-block;
 }
 
-.card-action-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.btn-card-action {
-  background: #f8fafc;
+.status-badge.in-progress {
+  background: #f1f5f9;
+  color: #0f172a;
   border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 11px;
-  color: #475569;
-  cursor: pointer;
 }
 
-.btn-card-action.delete:hover {
-  background: #fef2f2;
+.status-badge.completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.not-started {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+/* ✅ タスク内 作業ToDoアイテム スタイル */
+.todo-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.todo-item-row.completed {
+  background: #f8fafc;
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.todo-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.todo-delete-btn {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
+.todo-delete-btn:hover {
   color: #ef4444;
-  border-color: #fca5a5;
+  background: #fef2f2;
 }

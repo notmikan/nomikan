@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/gantt.css">
   <link rel="stylesheet" href="css/modal.css">
   <link rel="stylesheet" href="css/sns.css">
+  <link rel="stylesheet" href="css/inventory.css">
   
   <!-- Firebase JS SDK (v10 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -29,7 +30,7 @@
         <button class="nav-tab active" data-tab="home">ホーム</button>
         <button class="nav-tab" data-tab="timetable">タイムテーブル</button>
         <button class="nav-tab" data-tab="budget">サマリー <span class="tab-badge">Dev</span></button>
-        <button class="nav-tab" data-tab="inventory">在庫 <span class="tab-badge">Soon</span></button>
+        <button class="nav-tab" data-tab="inventory">在庫</button>
       </nav>
     </div>
 
@@ -121,109 +122,152 @@
       </div>
     </section>
 
-    <!-- 在庫管理タブビュー (準備中) -->
+    <!-- 在庫管理タブビュー -->
     <section id="inventoryTab" class="tab-content">
-      <div class="placeholder-card">
-        <div class="placeholder-icon">📦</div>
-        <h2>資材・部品在庫管理</h2>
-        <p>カーボンボルト・樹脂・工具類の管理機能（準備中）</p>
+      <div class="sub-toolbar">
+        <div class="toolbar-left">
+          <div class="filter-group">
+            <button class="filter-btn active inventory-filter-btn" data-team="all">全体</button>
+            <button class="filter-btn inventory-filter-btn" data-team="FRP">FRP</button>
+            <button class="filter-btn inventory-filter-btn" data-team="翼">翼</button>
+            <button class="filter-btn inventory-filter-btn" data-team="コクピ">コクピ</button>
+            <button class="filter-btn inventory-filter-btn" data-team="電装">電装</button>
+            <button class="filter-btn inventory-filter-btn" data-team="運営">運営</button>
+          </div>
+        </div>
+        <div class="toolbar-right" style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="inventorySearchInput" class="form-control" placeholder="資材・部品・工具を検索..." style="width: 200px;">
+          <button class="btn btn-primary" id="addInventoryBtn">＋ 資材を追加</button>
+        </div>
+      </div>
+
+      <!-- 在庫カード一覧グリッド -->
+      <div id="inventoryGrid" class="inventory-cards-grid">
+        <!-- JSで動的描画 -->
       </div>
     </section>
 
   </main>
 
-  <!-- タスク編集モーダル -->
+  <!-- メンバー・タスク詳細・作業ToDoモーダル (2列レイアウト) -->
   <div class="modal-overlay" id="taskModal">
-    <div class="modal">
+    <div class="modal modal-wide">
       <div class="modal-header">
-        <div class="modal-title" id="modalTitle">タスク編集</div>
+        <div class="modal-title" id="modalTitle">タスク詳細</div>
         <button class="action-btn" id="closeModal">✕</button>
       </div>
       <form id="taskForm">
         <input type="hidden" id="taskId">
 
-        <div class="form-group">
-          <label>タスク名</label>
-          <input type="text" id="taskName" class="form-control" placeholder="タスク名を入力..." required>
+        <div class="task-modal-body-grid">
+          <!-- 【左カラム】 基本設定 ＆ メモ -->
+          <div class="modal-col-left">
+            <div class="form-group">
+              <label>タスク名</label>
+              <input type="text" id="taskName" class="form-control" placeholder="タスク名を入力..." required>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>担当班</label>
+                <select id="taskTeam" class="form-control">
+                  <option value="運営">運営</option>
+                  <option value="FRP">FRP</option>
+                  <option value="翼">翼</option>
+                  <option value="コクピ">コクピ</option>
+                  <option value="電装">電装</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>担当者</label>
+                <input type="text" id="taskAssignee" class="form-control" placeholder="担当者名" required>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px;">
+                <input type="checkbox" id="enableSpecificDate"> 日付で指定する
+              </label>
+            </div>
+
+            <div class="form-row" id="specificDateContainer" style="display: none;">
+              <div class="form-group">
+                <label>開始日</label>
+                <input type="date" id="taskStartDate" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>終了日</label>
+                <input type="date" id="taskEndDate" class="form-control">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>開始月</label>
+                <select id="taskStart" class="form-control" required>
+                  <option value="8">8月</option>
+                  <option value="9">9月</option>
+                  <option value="10">10月</option>
+                  <option value="11">11月</option>
+                  <option value="12">12月</option>
+                  <option value="1">1月</option>
+                  <option value="2">2月</option>
+                  <option value="3">3月</option>
+                  <option value="4">4月</option>
+                  <option value="5">5月</option>
+                  <option value="6">6月</option>
+                  <option value="7">7月</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>終了月</label>
+                <select id="taskEnd" class="form-control" required>
+                  <option value="8">8月</option>
+                  <option value="9">9月</option>
+                  <option value="10">10月</option>
+                  <option value="11">11月</option>
+                  <option value="12">12月</option>
+                  <option value="1">1月</option>
+                  <option value="2">2月</option>
+                  <option value="3">3月</option>
+                  <option value="4">4月</option>
+                  <option value="5">5月</option>
+                  <option value="6">6月</option>
+                  <option value="7">7月</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- メモ -->
+            <div class="form-group" style="margin-top: 10px;">
+              <label style="font-weight: 700; color: #0f172a; font-size: 13px;">メモ</label>
+              <textarea id="taskNote" class="form-control" placeholder="注意事項や資材メモなど..." rows="3" style="font-size: 13px; line-height: 1.5; resize: vertical;"></textarea>
+            </div>
+          </div>
+
+          <!-- 【右カラム】 ToDoリスト (白背景・シームレス) -->
+          <div class="modal-col-right" style="height: 100%; display: flex; flex-direction: column;">
+            <div class="form-group" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="margin-bottom: 0; font-weight: 700; color: #0f172a; font-size: 13px;">ToDoリスト</label>
+                <span id="taskProgressValueText" style="font-size: 11px; font-weight: 700; color: #0f172a; background: #f1f5f9; padding: 2px 8px; border-radius: 10px; border: 1px solid #cbd5e1;">進捗 0%</span>
+              </div>
+
+              <!-- 新規ToDo追加インプット -->
+              <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <input type="text" id="newTodoInput" class="form-control" placeholder="ToDoを追加..." style="font-size: 13px;">
+                <button type="button" class="btn btn-primary btn-sm" id="addTodoBtn" style="white-space: nowrap; padding: 6px 14px;">＋ 追加</button>
+              </div>
+
+              <!-- ToDoアイテム一覧 (白背景リスト枠) -->
+              <div id="todoListContainer" style="flex: 1; min-height: 240px; max-height: 320px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; background: #ffffff; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <!-- JSで動的描画 -->
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>担当</label>
-            <select id="taskTeam" class="form-control">
-              <option value="運営">運営</option>
-              <option value="FRP">FRP</option>
-              <option value="翼">翼</option>
-              <option value="コクピ">コクピ</option>
-              <option value="電装">電装</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>担当者</label>
-            <input type="text" id="taskAssignee" class="form-control" placeholder="担当者名" required>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="enableSpecificDate"> 日付で指定する
-          </label>
-        </div>
-
-        <div class="form-row" id="specificDateContainer" style="display: none;">
-          <div class="form-group">
-            <label>開始日</label>
-            <input type="date" id="taskStartDate" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>終了日</label>
-            <input type="date" id="taskEndDate" class="form-control">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>開始月</label>
-            <select id="taskStart" class="form-control" required>
-              <option value="8">8月</option>
-              <option value="9">9月</option>
-              <option value="10">10月</option>
-              <option value="11">11月</option>
-              <option value="12">12月</option>
-              <option value="1">1月</option>
-              <option value="2">2月</option>
-              <option value="3">3月</option>
-              <option value="4">4月</option>
-              <option value="5">5月</option>
-              <option value="6">6月</option>
-              <option value="7">7月</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>終了月</label>
-            <select id="taskEnd" class="form-control" required>
-              <option value="8">8月</option>
-              <option value="9">9月</option>
-              <option value="10">10月</option>
-              <option value="11">11月</option>
-              <option value="12">12月</option>
-              <option value="1">1月</option>
-              <option value="2">2月</option>
-              <option value="3">3月</option>
-              <option value="4">4月</option>
-              <option value="5">5月</option>
-              <option value="6">6月</option>
-              <option value="7">7月</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>メモ</label>
-          <textarea id="taskNote" class="form-control" rows="3" placeholder="メモを入力..."></textarea>
-        </div>
-
-        <div class="modal-actions">
+        <div class="modal-actions" style="margin-top: 16px;">
           <button type="button" class="btn btn-danger" id="deleteModalBtn" style="margin-right:auto; display:none;">削除</button>
           <button type="button" class="btn" id="cancelBtn">キャンセル</button>
           <button type="submit" class="btn btn-primary">保存</button>
@@ -369,12 +413,81 @@
     </button>
   </nav>
 
+  <!-- 📦 資材・部品在庫 追加・編集モーダル -->
+  <div class="modal-overlay" id="inventoryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="inventoryModalTitle">資材を追加</div>
+        <button class="action-btn" id="closeInventoryModal">✕</button>
+      </div>
+      <form id="inventoryForm">
+        <input type="hidden" id="inventoryId">
+
+        <div class="form-group">
+          <label>品名 (名称)</label>
+          <input type="text" id="inventoryName" class="form-control" placeholder="例: カーボンクロス #200" required>
+        </div>
+
+        <div class="form-group">
+          <label>所有班 (複数選択可)</label>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+              <input type="checkbox" name="inventoryTeamCheck" value="FRP"> FRP
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+              <input type="checkbox" name="inventoryTeamCheck" value="翼"> 翼
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+              <input type="checkbox" name="inventoryTeamCheck" value="コクピ"> コクピ
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+              <input type="checkbox" name="inventoryTeamCheck" value="電装"> 電装
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+              <input type="checkbox" name="inventoryTeamCheck" value="運営"> 運営
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>数量 ＆ 単位</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="number" id="inventoryQty" class="form-control" value="1" min="0" required style="flex: 1;">
+            <select id="inventoryUnit" class="form-control" style="width: 100px;">
+              <option value="個">個</option>
+              <option value="本">本</option>
+              <option value="枚">枚</option>
+              <option value="巻">巻</option>
+              <option value="缶">缶</option>
+              <option value="セット">セット</option>
+              <option value="kg">kg</option>
+              <option value="m">m</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>メモ</label>
+          <textarea id="inventoryNote" class="form-control" rows="3" placeholder="メモを入力..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="deleteInventoryModalBtn" style="margin-right:auto; display:none;">削除</button>
+          <button type="button" class="btn" id="cancelInventoryBtn">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- モジュールJavaScriptの読み込み -->
   <script src="js/config.js"></script>
   <script src="js/db.js"></script>
   <script src="js/home.js"></script>
   <script src="js/timetable.js"></script>
+  <script src="js/ai.js"></script>
   <script src="js/sns.js"></script>
+  <script src="js/inventory.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

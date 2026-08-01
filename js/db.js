@@ -124,6 +124,7 @@ function saveTasksToDb(tasksToSave) {
   if (firebaseDbRef) {
     firebaseDbRef.set(tasksToSave).then(() => {
       localStorage.setItem('hope_webapp_tasks_v10', JSON.stringify(tasksToSave));
+      if (typeof render === 'function') render();
     }).catch(err => {
       console.error("Firebase write error:", err);
       localStorage.setItem('hope_webapp_tasks_v10', JSON.stringify(tasksToSave));

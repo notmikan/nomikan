@@ -14,8 +14,8 @@
   --color-cockpit: #0284c7; /* スカイ */
   --color-elec: #7c3aed;    /* バイオレット */
 
-  --primary-color: #4f46e5;
-  --primary-hover: #4338ca;
+  --primary-color: #0f172a;
+  --primary-hover: #1e293b;
 }
 
 * {
@@ -260,15 +260,15 @@ h1 {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #0f172a;
   color: #ffffff;
   border: none;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #4338ca, #4f46e5);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  background: #1e293b;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
   transform: translateY(-1px);
 }
 
@@ -422,4 +422,9 @@ h1 {
   .filter-group {
     width: 100%;
   }
+}
+
+/* スライダーアクセントカラーのシックなモノトーン化 */
+input[type="range"] {
+  accent-color: #0f172a;
 }
