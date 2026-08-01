@@ -11,7 +11,7 @@
   background: #0f172a !important;
   color: #ffffff !important;
   border: none !important;
-  display: flex !important;
+  display: flex;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;

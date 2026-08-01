@@ -24,6 +24,16 @@
   padding: 0;
 }
 
+a, a:visited, a:hover, a:active {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  color: inherit;
+  font-family: inherit;
+}
+
 body {
   font-family: 'Inter', 'Noto Sans JP', sans-serif;
   background-color: var(--bg-color);
@@ -355,11 +365,11 @@ h1 {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 2px !important;
+    gap: 3px !important;
     background: transparent !important;
     border: none !important;
     outline: none !important;
-    padding: 4px 0 !important;
+    padding: 6px 0 !important;
     color: #64748b !important;
     cursor: pointer !important;
     transition: color 0.15s ease, transform 0.1s ease !important;
@@ -369,23 +379,41 @@ h1 {
   }
 
   .mobile-bottom-nav .nav-icon {
-    font-size: 20px !important;
-    line-height: 1 !important;
-    transition: transform 0.15s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    color: #64748b !important;
+    transition: transform 0.15s ease, color 0.15s ease !important;
+  }
+
+  .mobile-bottom-nav .nav-icon svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke: currentColor !important;
+    transition: all 0.15s ease !important;
   }
 
   .mobile-bottom-nav .nav-label {
     font-size: 10px !important;
     font-weight: 600 !important;
     white-space: nowrap !important;
+    color: inherit !important;
   }
 
   .mobile-bottom-nav .nav-item.active {
-    color: #4f46e5 !important;
+    color: #0f172a !important;
   }
 
   .mobile-bottom-nav .nav-item.active .nav-icon {
-    transform: scale(1.15) !important;
+    color: #0f172a !important;
+    transform: scale(1.08) !important;
+  }
+
+  .mobile-bottom-nav .nav-item.active .nav-icon svg {
+    stroke-width: 2.6px !important;
+    stroke: #0f172a !important;
   }
 
   /* ヘッダー全体 */
