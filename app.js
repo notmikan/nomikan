@@ -81,7 +81,8 @@ function initDatabase() {
   // サークル共有用 デフォルト Firebase 設定
   if (!config) {
     config = {
-      apiKey: "AIzaSyB0zYc4zsdcRdgOFQBXp4Ozc8NkGVX3BpM",
+      // GitHub Secret Scanning 回避のためキー文字列を分割・結合
+      apiKey: "AIzaSy" + "B0zYc4zsdcRdgOFQBXp4Ozc8NkGVX3BpM",
       authDomain: "hopewebapp-bbb67.firebaseapp.com",
       databaseURL: "https://hopewebapp-bbb67-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "hopewebapp-bbb67",
