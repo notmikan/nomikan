@@ -67,36 +67,58 @@ const dbConfigModal = document.getElementById('dbConfigModal');
 // --- 1. Firebase ＆ データ管理 ---
 
 function initDatabase() {
-  const savedConfigStr = localStorage.getItem('hope_firebase_config');
+  let savedConfigStr = localStorage.getItem('hope_firebase_config');
+  let config = null;
   
-  if (savedConfigStr && typeof firebase !== 'undefined') {
+  if (savedConfigStr) {
     try {
-      const config = JSON.parse(savedConfigStr);
-      if (config && (config.databaseURL || config.apiKey)) {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(config);
-        }
-        firebaseDbRef = firebase.database().ref('hope_webapp_tasks');
-        
-        // リアルタイムリスナー設定
-        firebaseDbRef.on('value', (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            currentTasks = Array.isArray(val) ? val : Object.values(val);
-          } else {
-            currentTasks = [...defaultTasks];
-            saveTasksToDb(currentTasks);
-          }
-          setOnlineStatus(true);
-          render();
-        }, (error) => {
-          console.warn("Firebase sync error:", error);
-          fallbackToLocal();
-        });
-        return;
-      }
+      config = JSON.parse(savedConfigStr);
     } catch (e) {
-      console.error("Invalid Firebase config:", e);
+      console.error("Invalid saved Firebase config:", e);
+    }
+  }
+
+  // サークル共有用 デフォルト Firebase 設定
+  if (!config) {
+    config = {
+      apiKey: "AIzaSyB0zYc4zsdcRdgOFQBXp4Ozc8NkGVX3BpM",
+      authDomain: "hopewebapp-bbb67.firebaseapp.com",
+      databaseURL: "https://hopewebapp-bbb67-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "hopewebapp-bbb67",
+      storageBucket: "hopewebapp-bbb67.firebasestorage.app",
+      messagingSenderId: "703845634374",
+      appId: "1:703845634374:web:04cfd32d287fb5a8b9d547",
+      measurementId: "G-1S4YP3W3Y8"
+    };
+  }
+
+  if (config && (config.apiKey || config.databaseURL) && typeof firebase !== 'undefined') {
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(config);
+      }
+      firebaseDbRef = firebase.database().ref('hope_webapp_tasks');
+      
+      // リアルタイムリスナー設定
+      firebaseDbRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val && Array.isArray(val) && val.length > 0) {
+          currentTasks = val;
+        } else if (val && typeof val === 'object' && Object.keys(val).length > 0) {
+          currentTasks = Object.values(val);
+        } else {
+          currentTasks = [...defaultTasks];
+          saveTasksToDb(currentTasks);
+        }
+        setOnlineStatus(true);
+        render();
+      }, (error) => {
+        console.warn("Firebase sync error:", error);
+        fallbackToLocal();
+      });
+      return;
+    } catch (e) {
+      console.error("Firebase init error:", e);
     }
   }
   fallbackToLocal();
@@ -107,14 +129,28 @@ function fallbackToLocal() {
   firebaseDbRef = null;
   setOnlineStatus(false);
 
-  // 古いバージョンストレージをクリアし完全最新データを適用
-  const localSaved = localStorage.getItem('hope_webapp_tasks_v10');
-  if (localSaved) {
-    currentTasks = JSON.parse(localSaved);
-  } else {
+  try {
+    const localSaved = localStorage.getItem('hope_webapp_tasks_v10');
+    if (localSaved) {
+      const parsed = JSON.parse(localSaved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        currentTasks = parsed;
+      } else {
+        currentTasks = [...defaultTasks];
+      }
+    } else {
+      currentTasks = [...defaultTasks];
+    }
+  } catch (e) {
     currentTasks = [...defaultTasks];
-    localStorage.setItem('hope_webapp_tasks_v10', JSON.stringify(currentTasks));
   }
+  
+  // currentTasks が万が一空の場合は必ず初期データを入れる
+  if (!currentTasks || currentTasks.length === 0) {
+    currentTasks = [...defaultTasks];
+  }
+  
+  localStorage.setItem('hope_webapp_tasks_v10', JSON.stringify(currentTasks));
   render();
 }
 
