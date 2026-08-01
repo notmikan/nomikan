@@ -72,13 +72,16 @@ function initDatabase() {
   
   if (savedConfigStr) {
     try {
-      config = JSON.parse(savedConfigStr);
+      const parsed = JSON.parse(savedConfigStr);
+      if (parsed && parsed.apiKey && parsed.databaseURL) {
+        config = parsed;
+      }
     } catch (e) {
       console.error("Invalid saved Firebase config:", e);
     }
   }
 
-  // サークル共有用 デフォルト Firebase 設定
+  // サークル共有用 デフォルト Firebase 設定（保存された設定がない、または不完全な場合）
   if (!config) {
     config = {
       // GitHub Secret Scanning 回避のためキー文字列を分割・結合
@@ -221,6 +224,7 @@ function render() {
 
 // 【全体概要モード】(1班1行でシームレス連続横長ガントバー描画)
 function renderCompact(filteredTasks) {
+  const grid = document.getElementById('ganttGrid');
   const teams = ['全体', 'FRP', '翼', 'コクピ', '電装'];
 
   let html = `
@@ -285,59 +289,64 @@ function renderCompact(filteredTasks) {
   grid.innerHTML = html;
 }
 
-// 【個別詳細モード】(1タスク1行でシームレス連続ガントバー描画)
+// 【各班詳細・検索モード】 (見やすい月別カードリスト表示)
 function renderDetailed(filteredTasks) {
-  let html = `
-    <div class="gantt-wrapper">
-      <div class="gantt-header-row-detailed">
-        <div class="gantt-header-cell" style="text-align:left; padding-left:14px;">タスク名</div>
-        <div class="gantt-header-cell" style="text-align:left; padding-left:14px;">担当者</div>
-        <div class="gantt-header-cell">8月</div>
-        <div class="gantt-header-cell">9月</div>
-        <div class="gantt-header-cell">10月</div>
-        <div class="gantt-header-cell">11月</div>
-        <div class="gantt-header-cell">12月</div>
-        <div class="gantt-header-cell">1月</div>
-        <div class="gantt-header-cell">2月</div>
-        <div class="gantt-header-cell">3月</div>
-        <div class="gantt-header-cell">4月</div>
-        <div class="gantt-header-cell">5月</div>
-        <div class="gantt-header-cell">6月</div>
-        <div class="gantt-header-cell">7月</div>
-        <div class="gantt-header-cell">操作</div>
-      </div>
-  `;
+  const grid = document.getElementById('ganttGrid');
+  const months = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7];
 
-  filteredTasks.forEach(task => {
-    const startCol = monthToIndex(task.start);
-    const endCol = monthToIndex(task.end) + 1;
+  if (filteredTasks.length === 0) {
+    grid.innerHTML = `
+      <div class="placeholder-card" style="margin: 20px 0; padding: 30px;">
+        <div class="placeholder-icon">🔍</div>
+        <h2>該当するタスクが見つかりませんでした</h2>
+        <p>検索条件を変更するか、右上の「➕ タスク追加」から新しく追加してください。</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = `<div class="team-cards-grid">`;
+
+  months.forEach(m => {
+    const mIdx = monthToIndex(m);
+    const monthTasks = filteredTasks.filter(t => {
+      const sIdx = monthToIndex(t.start);
+      const eIdx = monthToIndex(t.end);
+      return mIdx >= sIdx && mIdx <= eIdx;
+    });
+
+    if (monthTasks.length === 0) return;
 
     html += `
-      <div class="task-row-container">
-        <div class="task-label-cell">
-          <span class="badge badge-${task.team}" style="font-size:10px; padding:2px 6px;">${task.team}</span>
-          <span style="font-weight:600; font-size:13px; cursor:pointer;" onclick="openEditModalById('${task.id}')">${task.name}</span>
+      <div class="month-card-section">
+        <div class="month-card-header">
+          <span class="month-card-title">🗓️ ${m}月</span>
+          <span class="month-card-count">${monthTasks.length}件のタスク</span>
         </div>
-        <div class="task-assignee-cell">${task.assignee}</div>
-        <div class="team-timeline-grid">
-          <div class="month-grid-lines">
-            ${Array(12).fill('<div class="grid-line"></div>').join('')}
+        <div class="month-card-list">
+    `;
+
+    monthTasks.forEach(task => {
+      html += `
+        <div class="task-detail-card team-border-${task.team}">
+          <div class="card-top-row">
+            <span class="badge badge-${task.team}">${task.team}班</span>
+            <span class="card-duration-badge">${task.start}月〜${task.end}月</span>
           </div>
-          <div class="gantt-span-bar bg-${task.team}" 
-               style="grid-column: ${startCol} / ${endCol};" 
-               onclick="openEditModalById('${task.id}')">
-            ${task.name}
-            <div class="tooltip">
-              <strong>${task.name}</strong><br>
-              担当: ${task.assignee}<br>
-              期間: ${task.start}月〜${task.end}月<br>
-              備考: ${task.note || 'なし'}
-            </div>
+          <div class="card-task-title" onclick="openEditModalById('${task.id}')">${task.name}</div>
+          <div class="card-meta-row">
+            <span class="card-assignee">👤 ${task.assignee}</span>
+            ${task.note ? `<span class="card-note">📝 ${task.note}</span>` : ''}
+          </div>
+          <div class="card-action-row">
+            <button class="btn-card-action" onclick="openEditModalById('${task.id}')">✏️ 編集</button>
+            <button class="btn-card-action delete" onclick="deleteTaskById('${task.id}')">🗑️ 削除</button>
           </div>
         </div>
-        <div class="task-action-cell">
-          <button class="action-btn" onclick="openEditModalById('${task.id}')" title="編集">✏️</button>
-          <button class="action-btn delete" onclick="deleteTaskById('${task.id}')" title="削除">🗑️</button>
+      `;
+    });
+
+    html += `
         </div>
       </div>
     `;
