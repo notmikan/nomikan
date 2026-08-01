@@ -1,0 +1,139 @@
+/* css/modal.css - モーダルダイアログ・フォーム入力スタイル */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  padding: 16px;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: scale(0.96);
+  transition: transform 0.2s ease;
+}
+
+.modal-overlay.active .modal { transform: scale(1); }
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.form-group { margin-bottom: 14px; }
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.form-control.code-font {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.form-control:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.db-config-info {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.action-btn:hover { background: #f1f5f9; color: #0f172a; }

@@ -3,43 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HoPE 27代 サークル統合Webアプリケーション</title>
+  <title>HoPE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  
+  <!-- モジュールCSSの読み込み -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/gantt.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/sns.css">
   
   <!-- Firebase JS SDK (v10 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 <body>
 
   <!-- トップアプリヘッダー -->
   <header class="app-header">
     <div class="header-brand">
-      <h1>
-        <span class="logo-icon">✈️</span> HoPE 統合Webアプリ
-        <span class="version-tag">v2.0 Realtime</span>
-      </h1>
-      <!-- ナビゲーションタブ（拡張用） -->
+      <h1 class="app-title">HoPE</h1>
       <nav class="app-tabs">
-        <button class="nav-tab active" data-tab="timetable">🗓️ タイムテーブル</button>
-        <button class="nav-tab" data-tab="budget">💰 予算管理 <span class="tab-badge">Soon</span></button>
-        <button class="nav-tab" data-tab="inventory">📦 部品・資材在庫 <span class="tab-badge">Soon</span></button>
-        <button class="nav-tab" data-tab="members">👥 メンバー・シフト <span class="tab-badge">Soon</span></button>
-        <button class="nav-tab" data-tab="admin">🔒 幹部設定 <span class="tab-badge">Soon</span></button>
+        <button class="nav-tab active" data-tab="home">ホーム</button>
+        <button class="nav-tab" data-tab="timetable">タイムテーブル</button>
+        <button class="nav-tab" data-tab="budget">サマリー <span class="tab-badge">Dev</span></button>
+        <button class="nav-tab" data-tab="inventory">在庫 <span class="tab-badge">Soon</span></button>
       </nav>
     </div>
 
-    <!-- リアルタイム通信ステータス ＆ 設定 -->
+    <!-- 同期ステータス ＆ 設定 -->
     <div class="sync-status-container">
-      <div class="db-status-badge local" id="dbStatusBadge" title="クリックしてFirebase設定を変更">
+      <div class="db-status-badge local" id="dbStatusBadge" title="設定を変更">
         <span class="status-dot"></span>
-        <span id="dbStatusText">ローカル同期モード</span>
+        <span id="dbStatusText">ローカル</span>
       </div>
       <button class="btn btn-secondary btn-sm" id="openDbConfigBtn">
-        ⚙️ DB設定
+        ⚙️
       </button>
     </div>
   </header>
@@ -47,16 +48,32 @@
   <!-- メインコンテンツエリア -->
   <main class="main-content">
 
-    <!-- 🗓️ タイムテーブルタブビュー -->
-    <section id="timetableTab" class="tab-content active">
-      
-      <!-- サブツールバー -->
+    <!-- ホーム（タイムライン）ビュー -->
+    <section id="homeTab" class="tab-content active">
+      <div class="timeline-section">
+        <div class="x-tab-header">
+          <button class="x-tab-item active" data-post-team="all">すべて</button>
+          <button class="x-tab-item" data-post-team="雑談">#雑談</button>
+          <button class="x-tab-item" data-post-team="運営">#運営</button>
+          <button class="x-tab-item" data-post-team="FRP">#FRP</button>
+          <button class="x-tab-item" data-post-team="翼">#翼</button>
+          <button class="x-tab-item" data-post-team="コクピ">#コクピ</button>
+          <button class="x-tab-item" data-post-team="電装">#電装</button>
+        </div>
+        <div class="posts-timeline-grid" id="postsTimelineGrid">
+          <!-- JSでタイムラインポストを描画 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- タイムテーブルタブビュー -->
+    <section id="timetableTab" class="tab-content">
       <div class="sub-toolbar">
         <div class="toolbar-left">
-          <span class="view-badge" id="viewModeBadge">全体概要モード</span>
+          <span class="view-badge" id="viewModeBadge">全体概要</span>
           <div class="filter-group">
-            <button class="filter-btn active" data-team="all">全体概要</button>
-            <button class="filter-btn" data-team="全体">全体</button>
+            <button class="filter-btn active" data-team="all">全体</button>
+            <button class="filter-btn" data-team="運営">運営</button>
             <button class="filter-btn" data-team="FRP">FRP</button>
             <button class="filter-btn" data-team="翼">翼</button>
             <button class="filter-btn" data-team="コクピ">コクピ</button>
@@ -65,9 +82,9 @@
         </div>
 
         <div class="toolbar-right">
-          <input type="text" id="searchInput" class="search-input" placeholder="タスク・担当・メモ検索...">
+          <input type="text" id="searchInput" class="search-input" placeholder="検索...">
           <button class="btn btn-primary" id="addBtn">
-            ➕ タスク追加
+            ＋ タスク追加
           </button>
         </div>
       </div>
@@ -75,64 +92,95 @@
       <!-- ガントチャートコンテナ -->
       <div class="container">
         <div id="ganttGrid">
-          <!-- 動的描画 (app.js) -->
+          <!-- JSで描画 -->
         </div>
 
+        <!-- フッター凡例 -->
         <div class="footer-bar">
           <div class="legend-dots">
-            <div class="legend-item"><div class="legend-dot" style="background: var(--color-all)"></div> 全体・運用</div>
-            <div class="legend-item"><div class="legend-dot" style="background: var(--color-frp)"></div> FRP班</div>
-            <div class="legend-item"><div class="legend-dot" style="background: var(--color-wing)"></div> 翼班</div>
-            <div class="legend-item"><div class="legend-dot" style="background: var(--color-cockpit)"></div> コクピ班</div>
-            <div class="legend-item"><div class="legend-dot" style="background: var(--color-elec)"></div> 電装班</div>
+            <div class="legend-item"><span class="dot dot-frp"></span> FRP</div>
+            <div class="legend-item"><span class="dot dot-wing"></span> 翼</div>
+            <div class="legend-item"><span class="dot dot-cockpit"></span> コクピ</div>
+            <div class="legend-item"><span class="dot dot-elec"></span> 電装</div>
+            <div class="legend-item"><span class="dot dot-all"></span> 運営</div>
+            <div class="legend-item"><span class="dot dot-milestone"></span> マイルストーン</div>
           </div>
-          <div class="sync-info-text" id="syncInfoText">
-            ※ 変更内容はリアルタイムで全メンバーに同期されます
+          <div class="grid-stats" id="gridStats">
+            タスク数: 0
           </div>
         </div>
       </div>
-
     </section>
 
-    <!-- プレースホルダー タブビュー (将来機能用) -->
-    <section id="placeholderTab" class="tab-content">
+    <!-- 予算管理タブビュー (準備中) -->
+    <section id="budgetTab" class="tab-content">
       <div class="placeholder-card">
-        <div class="placeholder-icon" id="placeholderIcon">💰</div>
-        <h2 id="placeholderTitle">モジュール準備中</h2>
-        <p id="placeholderDesc">この機能モジュールは現在開発ロードマップ（Phase 3〜）に基づき準備中です。</p>
-        <button class="btn btn-primary" onclick="switchTab('timetable')">🗓️ タイムテーブルに戻る</button>
+        <div class="placeholder-icon">💰</div>
+        <h2>予算管理モジュール</h2>
+        <p>購入申請・部費管理機能（準備中）</p>
+      </div>
+    </section>
+
+    <!-- 在庫管理タブビュー (準備中) -->
+    <section id="inventoryTab" class="tab-content">
+      <div class="placeholder-card">
+        <div class="placeholder-icon">📦</div>
+        <h2>資材・部品在庫管理</h2>
+        <p>カーボンボルト・樹脂・工具類の管理機能（準備中）</p>
       </div>
     </section>
 
   </main>
 
-  <!-- モーダルダイアログ: タスク追加・編集 -->
+  <!-- タスク編集モーダル -->
   <div class="modal-overlay" id="taskModal">
     <div class="modal">
       <div class="modal-header">
-        <div class="modal-title" id="modalTitle">➕ タスクの追加</div>
+        <div class="modal-title" id="modalTitle">タスク編集</div>
         <button class="action-btn" id="closeModal">✕</button>
       </div>
       <form id="taskForm">
         <input type="hidden" id="taskId">
-        <div class="form-group">
-          <label>所属班</label>
-          <select id="taskTeam" class="form-control" required>
-            <option value="全体">全体・運用</option>
-            <option value="FRP">FRP班</option>
-            <option value="翼">翼班</option>
-            <option value="コクピ">コクピ班</option>
-            <option value="電装">電装班</option>
-          </select>
-        </div>
+
         <div class="form-group">
           <label>タスク名</label>
-          <input type="text" id="taskName" class="form-control" placeholder="例: T桁の積層" required>
+          <input type="text" id="taskName" class="form-control" placeholder="タスク名を入力..." required>
         </div>
-        <div class="form-group">
-          <label>担当者</label>
-          <input type="text" id="taskAssignee" class="form-control" placeholder="例: 大野 / FRP班" required>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>担当</label>
+            <select id="taskTeam" class="form-control">
+              <option value="運営">運営</option>
+              <option value="FRP">FRP</option>
+              <option value="翼">翼</option>
+              <option value="コクピ">コクピ</option>
+              <option value="電装">電装</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>担当者</label>
+            <input type="text" id="taskAssignee" class="form-control" placeholder="担当者名" required>
+          </div>
         </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="enableSpecificDate"> 日付で指定する
+          </label>
+        </div>
+
+        <div class="form-row" id="specificDateContainer" style="display: none;">
+          <div class="form-group">
+            <label>開始日</label>
+            <input type="date" id="taskStartDate" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>終了日</label>
+            <input type="date" id="taskEndDate" class="form-control">
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>開始月</label>
@@ -169,51 +217,164 @@
             </select>
           </div>
         </div>
+
         <div class="form-group">
-          <label>備考・マイルストーンメモ</label>
-          <input type="text" id="taskNote" class="form-control" placeholder="例: 11月までに完成させる">
+          <label>メモ</label>
+          <textarea id="taskNote" class="form-control" rows="3" placeholder="メモを入力..."></textarea>
         </div>
+
         <div class="modal-actions">
-          <button type="button" class="btn btn-danger" id="deleteModalBtn" style="margin-right:auto; display:none;">🗑️ このタスクを削除</button>
+          <button type="button" class="btn btn-danger" id="deleteModalBtn" style="margin-right:auto; display:none;">削除</button>
           <button type="button" class="btn" id="cancelBtn">キャンセル</button>
-          <button type="submit" class="btn btn-primary">保存する</button>
+          <button type="submit" class="btn btn-primary">保存</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- モーダルダイアログ: Firebase DB設定 -->
+  <!-- DB設定モーダル -->
   <div class="modal-overlay" id="dbConfigModal">
     <div class="modal">
       <div class="modal-header">
-        <div class="modal-title">⚙️ Firebase リアルタイムDB設定</div>
-        <button class="action-btn" id="closeDbModal">✕</button>
-      </div>
-      <div class="db-config-info">
-        <p>FirebaseのRealtime Databaseの設定を入力すると、全メンバーでリアルタイム編集が有効化されます。（空の場合はローカル保存モードで動作します）</p>
+        <div class="modal-title">データベース設定</div>
+        <button class="action-btn" id="closeDbConfigModal">✕</button>
       </div>
       <form id="dbConfigForm">
         <div class="form-group">
-          <label>Firebase Config (JSON形式 または databaseURL)</label>
-          <textarea id="firebaseConfigInput" class="form-control code-font" rows="6" placeholder='{
-  "apiKey": "AIzaSy...",
-  "authDomain": "hope-app.firebaseapp.com",
-  "databaseURL": "https://hope-app-default-rtdb.firebaseio.com",
-  "projectId": "hope-app",
-  "storageBucket": "hope-app.appspot.com",
-  "messagingSenderId": "...",
-  "appId": "..."
-}'></textarea>
+          <label>Firebase Realtime Database URL</label>
+          <input type="text" id="firebaseUrlInput" class="form-control" placeholder="https://your-app-default-rtdb.firebaseio.com">
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="resetDbConfigBtn" style="margin-right:auto;">ローカルモードに戻す</button>
-          <button type="button" class="btn" id="cancelDbBtn">キャンセル</button>
-          <button type="submit" class="btn btn-primary">設定を保存して接続</button>
+          <button type="button" class="btn btn-secondary" id="resetDbConfigBtn">ローカルへ戻す</button>
+          <button type="submit" class="btn btn-primary" style="margin-left: auto;">接続テスト・保存</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- メンバープロフィール設定モーダル -->
+  <div class="modal-overlay" id="userProfileModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">プロフィール設定</div>
+        <button class="action-btn" id="closeProfileModal" style="display:none;">✕</button>
+      </div>
+      <div class="db-config-info" style="margin-bottom:16px;">
+        <p>投稿に表示するお名前を設定してください。</p>
+      </div>
+      <form id="userProfileForm">
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+          <div class="x-avatar" id="profileAvatarPreview" style="width: 56px; height: 56px; font-size: 20px; flex-shrink:0;">👤</div>
+          <div>
+            <label for="modalAvatarInput" class="btn btn-secondary btn-sm" style="cursor: pointer;">📷 アイコン画像を変更</label>
+            <input type="file" id="modalAvatarInput" accept="image/*" style="display: none;">
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">自動で2KBに極小軽量化されます</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>表示名</label>
+          <input type="text" id="modalAuthorInput" class="form-control" placeholder="例: 山田" required>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary" style="width:100%;">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 新規投稿モーダル -->
+  <div class="modal-overlay" id="xPostComposeModal">
+    <div class="x-modal-card">
+      <div class="modal-header" style="margin-bottom: 12px;">
+        <div class="modal-title">新規投稿</div>
+        <button class="action-btn" id="closeComposeModalBtn">✕</button>
+      </div>
+      <form id="createPostForm">
+        <div class="x-compose-row">
+          <div class="x-avatar x-avatar-FRP" id="currentComposeAvatar">👤</div>
+          <div class="x-compose-body">
+            <div class="x-user-meta-bar">
+              <div class="x-user-info-text">
+                <span class="x-user-name" id="currentLoginUserName">未設定</span>
+              </div>
+              <button type="button" class="btn-link-sm" id="changeProfileBtn">⚙️ 変更</button>
+            </div>
+            <textarea id="postContentInput" class="x-textarea" rows="3" placeholder="いまどうしてる？" required></textarea>
+            
+            <!-- 📷 写真プレビュー枠 -->
+            <div class="x-image-preview-bar" id="imagePreviewBar"></div>
+
+            <div class="x-compose-bottom">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <select id="postCategorySelect" class="post-category-select">
+                  <option value="雑談">#雑談</option>
+                  <option value="FRP">#FRP</option>
+                  <option value="翼">#翼</option>
+                  <option value="コクピ">#コクピ</option>
+                  <option value="電装">#電装</option>
+                  <option value="運営">#運営</option>
+                </select>
+                <label for="postImageInput" class="btn-attach-image" title="写真を追加">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </label>
+                <input type="file" id="postImageInput" accept="image/*" multiple style="display:none;">
+              </div>
+              <button type="submit" class="btn-x-post" id="submitPostBtn">
+                投稿
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 🔍 画像拡大鑑賞モーダル -->
+  <div class="modal-overlay" id="imageLightboxModal" style="z-index: 999999;">
+    <div class="lightbox-content">
+      <button class="action-btn lightbox-close" id="closeLightboxBtn">✕</button>
+      <img id="lightboxImage" src="" alt="拡大画像" class="lightbox-img">
+    </div>
+  </div>
+
+  <!-- 📱 右下固定 浮遊投稿ボタン (FAB) -->
+  <button class="x-fab-post-btn" id="openComposeFabBtn" title="投稿">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
+  </button>
+
+  <!-- 📱 スマホ専用 固定ボトムナビゲーションバー -->
+  <nav class="mobile-bottom-nav">
+    <button class="nav-item active" data-tab="home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">ホーム</span>
+    </button>
+    <button class="nav-item" data-tab="timetable">
+      <span class="nav-icon">🗓️</span>
+      <span class="nav-label">タイムテーブル</span>
+    </button>
+    <button class="nav-item" data-tab="budget">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">サマリー</span>
+    </button>
+    <button class="nav-item" data-tab="inventory">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">在庫</span>
+    </button>
+  </nav>
+
+  <!-- モジュールJavaScriptの読み込み -->
+  <script src="js/config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/timetable.js"></script>
+  <script src="js/sns.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
