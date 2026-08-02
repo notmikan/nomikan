@@ -74,11 +74,15 @@ h1 {
   letter-spacing: -0.02em;
 }
 
-.app-logo-img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  border-radius: 6px;
+.app-logo-img,
+h1.app-title img {
+  width: 24px !important;
+  height: 24px !important;
+  max-width: 24px !important;
+  max-height: 24px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+  border-radius: 4px;
 }
 
 .logo-icon { font-size: 20px; }
