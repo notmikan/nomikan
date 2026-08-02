@@ -34,7 +34,9 @@
   border-right: 1px solid #f1f5f9;
 }
 
-.gantt-header-cell:last-child { border-right: none; }
+.gantt-header-cell:last-child {
+  border-right: none;
+}
 
 .team-row-container {
   display: grid;
@@ -42,7 +44,9 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.team-row-container:last-child { border-bottom: none; }
+.team-row-container:last-child {
+  border-bottom: none;
+}
 
 .team-label-cell {
   padding: 6px 12px;
@@ -77,7 +81,9 @@
   height: 100%;
 }
 
-.grid-line:last-child { border-right: none; }
+.grid-line:last-child {
+  border-right: none;
+}
 
 /* 23px正寸横長ガントバー */
 .gantt-span-bar {
@@ -116,17 +122,47 @@
   display: inline-block;
 }
 
-.badge-全体, .badge-運営 { background: var(--color-all); }
-.badge-FRP { background: var(--color-frp); }
-.badge-翼 { background: var(--color-wing); }
-.badge-コクピ { background: var(--color-cockpit); }
-.badge-電装 { background: var(--color-elec); }
+.badge-全体,
+.badge-運営 {
+  background: var(--color-all);
+}
 
-.bg-全体, .bg-運営 { background: var(--color-all); }
-.bg-FRP { background: var(--color-frp); }
-.bg-翼 { background: var(--color-wing); }
-.bg-コクピ { background: var(--color-cockpit); }
-.bg-電装 { background: var(--color-elec); }
+.badge-FRP {
+  background: var(--color-frp);
+}
+
+.badge-翼 {
+  background: var(--color-wing);
+}
+
+.badge-コクピ {
+  background: var(--color-cockpit);
+}
+
+.badge-電装 {
+  background: var(--color-elec);
+}
+
+.bg-全体,
+.bg-運営 {
+  background: var(--color-all);
+}
+
+.bg-FRP {
+  background: var(--color-frp);
+}
+
+.bg-翼 {
+  background: var(--color-wing);
+}
+
+.bg-コクピ {
+  background: var(--color-cockpit);
+}
+
+.bg-電装 {
+  background: var(--color-elec);
+}
 
 /* ツールチップ */
 .tooltip {
@@ -148,7 +184,9 @@
   line-height: 1.5;
 }
 
-.gantt-span-bar:hover .tooltip { opacity: 1; }
+.gantt-span-bar:hover .tooltip {
+  opacity: 1;
+}
 
 /* フッターバー */
 .footer-bar {
@@ -212,11 +250,26 @@
   border-color: #cbd5e1;
 }
 
-.team-border-全体, .team-border-運営 { border-left-color: var(--color-all); }
-.team-border-FRP { border-left-color: var(--color-frp); }
-.team-border-翼 { border-left-color: var(--color-wing); }
-.team-border-コクピ { border-left-color: var(--color-cockpit); }
-.team-border-電装 { border-left-color: var(--color-elec); }
+.team-border-全体,
+.team-border-運営 {
+  border-left-color: var(--color-all);
+}
+
+.team-border-FRP {
+  border-left-color: var(--color-frp);
+}
+
+.team-border-翼 {
+  border-left-color: var(--color-wing);
+}
+
+.team-border-コクピ {
+  border-left-color: var(--color-cockpit);
+}
+
+.team-border-電装 {
+  border-left-color: var(--color-elec);
+}
 
 .card-header-row {
   display: flex;

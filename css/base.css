@@ -6,13 +6,18 @@
   --border-color: #e2e8f0;
   --text-main: #0f172a;
   --text-muted: #64748b;
-  
+
   /* 洗練されたプロジェクトカラー */
-  --color-all: #e11d48;     /* ローズ */
-  --color-frp: #d97706;     /* アンバー */
-  --color-wing: #059669;    /* エメラルド */
-  --color-cockpit: #0284c7; /* スカイ */
-  --color-elec: #7c3aed;    /* バイオレット */
+  --color-all: #e11d48;
+  /* ローズ */
+  --color-frp: #d97706;
+  /* アンバー */
+  --color-wing: #059669;
+  /* エメラルド */
+  --color-cockpit: #0284c7;
+  /* スカイ */
+  --color-elec: #7c3aed;
+  /* バイオレット */
 
   --primary-color: #0f172a;
   --primary-hover: #1e293b;
@@ -24,7 +29,10 @@
   padding: 0;
 }
 
-a, a:visited, a:hover, a:active {
+a,
+a:visited,
+a:hover,
+a:active {
   color: inherit;
   text-decoration: none;
 }
@@ -85,7 +93,9 @@ h1.app-title img {
   border-radius: 4px;
 }
 
-.logo-icon { font-size: 20px; }
+.logo-icon {
+  font-size: 20px;
+}
 
 .version-tag {
   font-size: 10px;
@@ -121,7 +131,9 @@ h1.app-title img {
   white-space: nowrap;
 }
 
-.nav-tab:hover { color: var(--text-main); }
+.nav-tab:hover {
+  color: var(--text-main);
+}
 
 .nav-tab.active {
   background: #ffffff;
@@ -179,8 +191,14 @@ h1.app-title img {
   border-radius: 50%;
 }
 
-.online .status-dot { background: #10b981; box-shadow: 0 0 8px #10b981; }
-.local .status-dot { background: #f59e0b; }
+.online .status-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.local .status-dot {
+  background: #f59e0b;
+}
 
 /* ツールバー */
 .sub-toolbar {
@@ -231,7 +249,9 @@ h1.app-title img {
   flex-shrink: 0;
 }
 
-.filter-btn:hover { color: #0f172a; }
+.filter-btn:hover {
+  color: #0f172a;
+}
 
 .filter-btn.active {
   background: #f1f5f9;
@@ -272,7 +292,10 @@ h1.app-title img {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
 
 .btn:hover {
   background: #f8fafc;
@@ -311,7 +334,10 @@ h1.app-title img {
   flex-direction: column;
 }
 
-.tab-content { display: none; }
+.tab-content {
+  display: none;
+}
+
 .tab-content.active {
   display: flex;
   flex-direction: column;
@@ -347,7 +373,9 @@ h1.app-title img {
 }
 
 /* 📱 PCではモバイルボトムナビを隠す */
-.mobile-bottom-nav { display: none !important; }
+.mobile-bottom-nav {
+  display: none !important;
+}
 
 /* 📱 スマホ・モバイルサイズ（900px以下）での確実なアイコンボトムナビゲーション */
 @media (max-width: 900px) {
@@ -495,13 +523,27 @@ input[type="range"] {
 
 /* 📱 スワイプタブ切替時のヌルサクアニメーション */
 @keyframes swipeSlideLeft {
-  from { opacity: 0.45; transform: translateX(22px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0.45;
+    transform: translateX(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes swipeSlideRight {
-  from { opacity: 0.45; transform: translateX(-22px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0.45;
+    transform: translateX(-22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .swipe-anim-left {
