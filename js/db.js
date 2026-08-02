@@ -143,17 +143,43 @@ window.deleteTaskById = function(id) {
   }
 };
 
-// DB設定モーダルイベント
+// DB設定モーダルイベント（デバッグ用）
 const dbConfigModal = document.getElementById('dbConfigModal');
-const openDbConfigBtn = document.getElementById('openDbConfigBtn');
 const closeDbModal = document.getElementById('closeDbModal');
 const cancelDbBtn = document.getElementById('cancelDbBtn');
 const dbStatusBadge = document.getElementById('dbStatusBadge');
 
-if (openDbConfigBtn) openDbConfigBtn.addEventListener('click', () => dbConfigModal.classList.add('active'));
-if (dbStatusBadge) dbStatusBadge.addEventListener('click', () => dbConfigModal.classList.add('active'));
+// 🛠️ デバッグ用グローバル関数 (コンソール `openDbConfigModal()` で起動可能)
+window.openDbConfigModal = function() {
+  if (dbConfigModal) dbConfigModal.classList.add('active');
+};
+
 if (closeDbModal) closeDbModal.addEventListener('click', () => dbConfigModal.classList.remove('active'));
 if (cancelDbBtn) cancelDbBtn.addEventListener('click', () => dbConfigModal.classList.remove('active'));
+
+// ⌨️ デバッグ用隠しショートカット: Ctrl + Shift + D
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    e.preventDefault();
+    window.openDbConfigModal();
+  }
+});
+
+// 🖱️ デバッグ用隠しトリプルクリック (バッジを3連打でモーダル起動)
+if (dbStatusBadge) {
+  let badgeClickCount = 0;
+  let badgeClickTimer = null;
+  dbStatusBadge.addEventListener('click', () => {
+    badgeClickCount++;
+    clearTimeout(badgeClickTimer);
+    if (badgeClickCount >= 3) {
+      badgeClickCount = 0;
+      window.openDbConfigModal();
+    } else {
+      badgeClickTimer = setTimeout(() => { badgeClickCount = 0; }, 600);
+    }
+  });
+}
 
 document.getElementById('dbConfigForm')?.addEventListener('submit', (e) => {
   e.preventDefault();

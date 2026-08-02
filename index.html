@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HoPE</title>
+  
+  <!-- ファビコン・アプリアイコン設定 -->
+  <link rel="icon" href="icon.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="icon.webp">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -25,7 +30,7 @@
   <!-- トップアプリヘッダー -->
   <header class="app-header">
     <div class="header-brand">
-      <h1 class="app-title">HoPE</h1>
+      <h1 class="app-title"><img src="icon.webp" alt="HoPE" class="app-logo-img"> <span>HoPE</span></h1>
       <nav class="app-tabs">
         <button class="nav-tab active" data-tab="home">ホーム</button>
         <button class="nav-tab" data-tab="timetable">タイムテーブル</button>
@@ -34,15 +39,12 @@
       </nav>
     </div>
 
-    <!-- 同期ステータス ＆ 設定 -->
+    <!-- 同期ステータス -->
     <div class="sync-status-container">
-      <div class="db-status-badge local" id="dbStatusBadge" title="設定を変更">
+      <div class="db-status-badge local" id="dbStatusBadge">
         <span class="status-dot"></span>
         <span id="dbStatusText">ローカル</span>
       </div>
-      <button class="btn btn-secondary btn-sm" id="openDbConfigBtn">
-        ⚙️
-      </button>
     </div>
   </header>
 

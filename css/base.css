@@ -74,6 +74,13 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+.app-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
 .logo-icon { font-size: 20px; }
 
 .version-tag {
@@ -416,19 +423,27 @@ h1 {
     stroke: #0f172a !important;
   }
 
-  /* ヘッダー全体 */
+  /* ヘッダー全体 (スマホ時も改行せず1行で横並び配置) */
   .app-header {
-    padding: 12px 14px;
-    gap: 12px;
-    flex-direction: column;
-    align-items: stretch;
+    padding: 10px 14px;
+    gap: 8px;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 12px;
   }
 
   .header-brand {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+  }
+
+  .db-status-badge {
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+    cursor: default !important;
   }
 
   h1 {
