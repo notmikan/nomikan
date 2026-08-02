@@ -304,9 +304,21 @@ h1.app-title img {
   color: #be123c;
 }
 
-/* タブコンテンツ制御 */
+/* タブコンテンツ制御 (画面下部までスワイプ判定領域を100%全域に拡張) */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .tab-content { display: none; }
-.tab-content.active { display: block; }
+.tab-content.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: calc(100vh - 120px);
+  padding-bottom: 60px;
+}
 
 /* プレースホルダーカード */
 .placeholder-card {
@@ -340,7 +352,7 @@ h1.app-title img {
 /* 📱 スマホ・モバイルサイズ（900px以下）での確実なアイコンボトムナビゲーション */
 @media (max-width: 900px) {
   body {
-    padding: 8px 10px 84px 10px !important;
+    padding: 8px 10px calc(96px + env(safe-area-inset-bottom, 0px)) 10px !important;
   }
 
   /* 上部ヘッダーのタブは消す */
@@ -348,25 +360,27 @@ h1.app-title img {
     display: none !important;
   }
 
-  /* 📱 スマホ専用 アイコン固定ボトムナビゲーションバー */
+  /* 📱 スマホ専用 フローティング浮島カプセル ボトムナビゲーションバー */
   .mobile-bottom-nav {
     display: flex !important;
     position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 16px !important;
+    right: 16px !important;
+    width: calc(100% - 32px) !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
     height: 60px !important;
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border-top: 1px solid var(--border-color) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    border-radius: 9999px !important;
     z-index: 999999 !important;
     justify-content: space-around !important;
     align-items: center !important;
-    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.1) !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    padding: 0 8px !important;
     box-sizing: border-box !important;
   }
 
@@ -376,14 +390,15 @@ h1.app-title img {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 3px !important;
+    gap: 2px !important;
     background: transparent !important;
     border: none !important;
+    border-radius: 20px !important;
     outline: none !important;
-    padding: 6px 0 !important;
+    padding: 6px 4px !important;
     color: #64748b !important;
     cursor: pointer !important;
-    transition: color 0.15s ease, transform 0.1s ease !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
     text-decoration: none !important;
     -webkit-tap-highlight-color: transparent !important;
     box-shadow: none !important;
@@ -396,14 +411,14 @@ h1.app-title img {
     width: 24px !important;
     height: 24px !important;
     color: #64748b !important;
-    transition: transform 0.15s ease, color 0.15s ease !important;
+    transition: transform 0.2s ease, color 0.2s ease !important;
   }
 
   .mobile-bottom-nav .nav-icon svg {
     width: 22px !important;
     height: 22px !important;
     stroke: currentColor !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s ease !important;
   }
 
   .mobile-bottom-nav .nav-label {
@@ -411,15 +426,17 @@ h1.app-title img {
     font-weight: 600 !important;
     white-space: nowrap !important;
     color: inherit !important;
+    transition: color 0.2s ease !important;
   }
 
   .mobile-bottom-nav .nav-item.active {
     color: #0f172a !important;
+    background: rgba(15, 23, 42, 0.07) !important;
   }
 
   .mobile-bottom-nav .nav-item.active .nav-icon {
     color: #0f172a !important;
-    transform: scale(1.08) !important;
+    transform: scale(1.1) !important;
   }
 
   .mobile-bottom-nav .nav-item.active .nav-icon svg {
@@ -474,4 +491,23 @@ h1.app-title img {
 /* スライダーアクセントカラーのシックなモノトーン化 */
 input[type="range"] {
   accent-color: #0f172a;
+}
+
+/* 📱 スワイプタブ切替時のヌルサクアニメーション */
+@keyframes swipeSlideLeft {
+  from { opacity: 0.45; transform: translateX(22px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes swipeSlideRight {
+  from { opacity: 0.45; transform: translateX(-22px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.swipe-anim-left {
+  animation: swipeSlideLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.swipe-anim-right {
+  animation: swipeSlideRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

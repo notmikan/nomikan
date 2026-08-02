@@ -3,8 +3,8 @@
 /* 📱 右下固定 X (Twitter) 風 浮遊ポストボタン (FAB) */
 .x-fab-post-btn {
   position: fixed !important;
-  bottom: 75px !important;
-  right: 18px !important;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+  right: 20px !important;
   width: 56px !important;
   height: 56px !important;
   border-radius: 50% !important;

@@ -115,10 +115,189 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// 📱 スマホ用 画面スワイプによるサブタブ（班切り替え）ジェスチャー機能（1つ飛ばし防止 ＆ ヌルサクアニメーション版）
+let globalSwipeLock = false;
+
+// 🛡️ スワイプ直後に発生するブラウザの合成 click イベントの誤発火（他ボタンへの二重ジャンプ）をキャプチャフェーズで完全ブロック
+document.addEventListener('click', (e) => {
+  if (globalSwipeLock) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    return false;
+  }
+}, true);
+
+function initTouchSwipeTabs() {
+  function triggerContentAnimation(sectionId, direction) {
+    let animTarget = null;
+    if (sectionId === 'homeTab') animTarget = document.getElementById('postsTimelineGrid');
+    else if (sectionId === 'timetableTab') animTarget = document.getElementById('ganttGrid');
+    else if (sectionId === 'inventoryTab') animTarget = document.getElementById('inventoryGrid');
+
+    if (!animTarget) return;
+
+    const animClass = direction === 'left' ? 'swipe-anim-left' : 'swipe-anim-right';
+    animTarget.classList.remove('swipe-anim-left', 'swipe-anim-right');
+    // DOMリフロー強制
+    void animTarget.offsetWidth;
+    animTarget.classList.add(animClass);
+
+    setTimeout(() => {
+      animTarget.classList.remove(animClass);
+    }, 280);
+  }
+
+  function bindSwipeToSection(sectionId, getTabList, getCurrentVal, applyTabChange) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let isCandidate = false;
+    let isScrollCanceled = false;
+
+    section.addEventListener('touchstart', (e) => {
+      if (globalSwipeLock) return;
+      if (document.querySelector('.modal-overlay.active')) return;
+      // ユーザーが明確にボタンや入力フォーム、モーダル、ガントチャートバーを直接タップ操作する時だけ除外
+      if (e.target.closest('button, select, textarea, input:focus, .modal, .gantt-wrapper, .x-fab-post-btn')) return;
+
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartTime = Date.now();
+      isCandidate = true;
+      isScrollCanceled = false;
+    }, { passive: true });
+
+    section.addEventListener('touchmove', (e) => {
+      if (!isCandidate || isScrollCanceled || globalSwipeLock) return;
+
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+
+      // 縦スクロールが明確に優先された場合のみキャンセル (閾値を25px以上に緩和)
+      if (Math.abs(deltaY) > 25 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+        isScrollCanceled = true;
+      }
+    }, { passive: true });
+
+    section.addEventListener('touchend', (e) => {
+      if (!isCandidate || isScrollCanceled || globalSwipeLock) return;
+      isCandidate = false;
+
+      const now = Date.now();
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      const elapsedTime = now - touchStartTime;
+
+      const velocityX = Math.abs(deltaX) / Math.max(1, elapsedTime);
+
+      // スワイプ判定 (軽快かつスムーズに反応するよう緩和設定)
+      if (elapsedTime <= 500 && Math.abs(deltaX) >= 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15 && velocityX >= 0.08) {
+        const tabs = getTabList();
+        const currentVal = getCurrentVal();
+        const currentIndex = tabs.indexOf(currentVal);
+
+        if (currentIndex === -1) return;
+
+        let direction = '';
+        let targetIndex = -1;
+
+        if (deltaX < 0 && currentIndex < tabs.length - 1) {
+          // ⬅️ 左スワイプ (次へ)
+          direction = 'left';
+          targetIndex = currentIndex + 1;
+        } else if (deltaX > 0 && currentIndex > 0) {
+          // ➡️ 右スワイプ (前へ)
+          direction = 'right';
+          targetIndex = currentIndex - 1;
+        }
+
+        if (targetIndex !== -1 && direction) {
+          // 🔒 強力な排他ロックをかけて「1つ飛ばし」を100%防止
+          globalSwipeLock = true;
+
+          applyTabChange(tabs[targetIndex]);
+          triggerContentAnimation(sectionId, direction);
+
+          // アニメーション完了後にロック解除 (400ms)
+          setTimeout(() => {
+            globalSwipeLock = false;
+          }, 400);
+        }
+      }
+    }, { passive: true });
+  }
+
+  // 1. 💬 ホーム (SNS) タブのスワイプ切替
+  bindSwipeToSection(
+    'homeTab',
+    () => ['all', '雑談', '運営', 'FRP', '翼', 'コクピ', '電装'],
+    () => (typeof currentPostTeamFilter !== 'undefined' ? currentPostTeamFilter : 'all'),
+    (newTeam) => {
+      if (typeof currentPostTeamFilter !== 'undefined') {
+        currentPostTeamFilter = newTeam;
+        const btn = document.querySelector(`.x-tab-item[data-post-team="${newTeam}"]`);
+        if (btn) {
+          document.querySelectorAll('.x-tab-item').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+        if (typeof renderPostsTimeline === 'function') renderPostsTimeline();
+      }
+    }
+  );
+
+  // 2. 🗓️ タイムテーブル タブのスワイプ切替
+  bindSwipeToSection(
+    'timetableTab',
+    () => ['all', '運営', 'FRP', '翼', 'コクピ', '電装'],
+    () => (typeof currentTeamFilter !== 'undefined' ? currentTeamFilter : 'all'),
+    (newTeam) => {
+      if (typeof currentTeamFilter !== 'undefined') {
+        currentTeamFilter = newTeam;
+        const btn = document.querySelector(`.sub-toolbar .filter-btn[data-team="${newTeam}"]:not(.inventory-filter-btn)`);
+        if (btn) {
+          document.querySelectorAll('.sub-toolbar .filter-btn:not(.inventory-filter-btn)').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+        if (typeof render === 'function') render();
+      }
+    }
+  );
+
+  // 3. 📦 在庫 タブのスワイプ切替
+  bindSwipeToSection(
+    'inventoryTab',
+    () => ['all', '運営', 'FRP', '翼', 'コクピ', '電装'],
+    () => (typeof currentInventoryTeamFilter !== 'undefined' ? currentInventoryTeamFilter : 'all'),
+    (newTeam) => {
+      if (typeof currentInventoryTeamFilter !== 'undefined') {
+        currentInventoryTeamFilter = newTeam;
+        const btn = document.querySelector(`.inventory-filter-btn[data-team="${newTeam}"]`);
+        if (btn) {
+          document.querySelectorAll('.inventory-filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+        if (typeof renderInventory === 'function') renderInventory();
+      }
+    }
+  );
+}
+
 // アプリ全体の初期化実行
 document.addEventListener('DOMContentLoaded', () => {
   initDatabase();
+  initTouchSwipeTabs();
 });
 
 // 即時初期化フォールバック
 initDatabase();
+setTimeout(initTouchSwipeTabs, 300);
