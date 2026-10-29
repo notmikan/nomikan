@@ -29,17 +29,3 @@ const TEAM_COLORS = {
   'コクピ': 'var(--color-cockpit)',
   '電装': 'var(--color-elec)'
 };
-
-// Gemini API キー設定 (GitHub Secret Scanning 対策・安全取得)
-const DEFAULT_GEMINI_API_KEY = '';
-
-function getGeminiApiKey() {
-  const saved = localStorage.getItem('hope_gemini_api_key');
-  if (saved && saved.trim()) return saved.trim();
-  // 初回自動プリセット (localStorage 側に動的保管)
-  const defaultKeyPart = ['AQ.Ab8RN6J_', 'vL7FxdmzAM2nZF1PmzqLS4MtyVyHLp9Wr33tTHoM8g'].join('');
-  try {
-    localStorage.setItem('hope_gemini_api_key', defaultKeyPart);
-  } catch (e) {}
-  return defaultKeyPart;
-}

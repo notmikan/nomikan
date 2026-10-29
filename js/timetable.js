@@ -4,6 +4,9 @@
 
 let currentTeamFilter = 'all';
 let currentQuery = '';
+let currentViewMode = 'year'; // 'year' | 'month'
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth() + 1;
 
 function monthToIndex(m) {
   return Number(m) >= 8 ? Number(m) - 7 : Number(m) + 5;
@@ -35,11 +38,19 @@ function render() {
     const matchTeam = currentTeamFilter === 'all' || teamName === filterName;
     const matchQuery = !currentQuery || 
                        task.name.includes(currentQuery) || 
-                       task.assignee.includes(currentQuery) || 
+                       (task.assignee && task.assignee.includes(currentQuery)) || 
                        (task.note && task.note.includes(currentQuery));
     return matchTeam && matchQuery;
   });
 
+  // 📆 月間カレンダーモード
+  if (currentViewMode === 'month') {
+    if (badge) badge.textContent = `${calYear}年 ${calMonth}月 カレンダー`;
+    renderMonthlyCalendar(filtered);
+    return;
+  }
+
+  // 🌐 年間ガントモード
   const isCompactView = (currentTeamFilter === 'all' && currentQuery === '');
 
   if (isCompactView) {
@@ -87,7 +98,9 @@ function renderCompact(filteredTasks) {
         </div>
         <div class="team-timeline-grid">
           <div class="month-grid-lines">
-            ${Array(12).fill('<div class="grid-line"></div>').join('')}
+            ${MONTHS.map(m => `
+              <div class="grid-line" onclick="openAddTaskModal({ month: ${m}, team: '${teamName}' })" title="${teamName}班の${m}月にタスクを追加" style="cursor: pointer; pointer-events: auto;"></div>
+            `).join('')}
           </div>
     `;
 
@@ -98,7 +111,7 @@ function renderCompact(filteredTasks) {
       html += `
         <div class="gantt-span-bar bg-${normalizeTeam(task.team)}" 
              style="grid-column: ${startCol} / ${endCol};" 
-             onclick="openEditModalById('${task.id}')">
+             onclick="event.stopPropagation(); openEditModalById('${task.id}')">
           ${task.name}
           <div class="tooltip">
             <strong>${task.name}</strong><br>
@@ -203,6 +216,125 @@ function renderDetailed(filteredTasks) {
   grid.innerHTML = html;
 }
 
+// 📆 【月間カレンダーモード】(日別グリッド ＆ 日付マス目タップ作成)
+function renderMonthlyCalendar(filteredTasks) {
+  const grid = document.getElementById('ganttGrid');
+  if (!grid) return;
+
+  const currentLabel = document.getElementById('currentMonthLabel');
+  if (currentLabel) {
+    currentLabel.textContent = `${calYear}年 ${calMonth}月`;
+  }
+
+  const today = new Date();
+  const todayYMD = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const firstDay = new Date(calYear, calMonth - 1, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const prevMonthLastDate = new Date(calYear, calMonth - 1, 0).getDate();
+
+  let html = `
+    <div class="monthly-calendar-wrapper">
+      <div class="month-cal-header-row">
+        <div class="month-cal-header-cell sunday">日</div>
+        <div class="month-cal-header-cell">月</div>
+        <div class="month-cal-header-cell">火</div>
+        <div class="month-cal-header-cell">水</div>
+        <div class="month-cal-header-cell">木</div>
+        <div class="month-cal-header-cell">金</div>
+        <div class="month-cal-header-cell saturday">土</div>
+      </div>
+      <div class="month-cal-days-grid">
+  `;
+
+  // 前月の余白マス
+  for (let i = 0; i < firstDay; i++) {
+    const dayNum = prevMonthLastDate - firstDay + i + 1;
+    html += `
+      <div class="month-cal-day-cell other-month">
+        <div class="month-cal-day-header">
+          <span class="month-cal-day-num">${dayNum}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // 当月の日付マス
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayYMD = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayOfWeek = (firstDay + day - 1) % 7;
+    const isToday = dayYMD === todayYMD;
+    const dayClass = dayOfWeek === 0 ? 'sunday' : (dayOfWeek === 6 ? 'saturday' : '');
+
+    // 当日に該当するタスクを抽出（※カレンダーには具体的な日付が指定されたタスクのみを表示）
+    const dayTasks = filteredTasks.filter(task => {
+      if (!task.startDate && !task.endDate) {
+        return false; // 日付未指定のタスク（年間ガント専用）はカレンダーに含めない
+      }
+      const start = task.startDate || task.endDate;
+      const end = task.endDate || task.startDate;
+      return start <= dayYMD && dayYMD <= end;
+    });
+
+    let tasksHtml = '';
+    dayTasks.forEach(task => {
+      const isPeriod = Boolean(task.startDate && task.endDate && task.startDate !== task.endDate);
+      const label = isPeriod ? `📅 ${task.name}` : task.name;
+      tasksHtml += `
+        <div class="month-cal-task-chip bg-${normalizeTeam(task.team)}" 
+             onclick="event.stopPropagation(); openEditModalById('${task.id}')"
+             title="${escapeHtml(task.name)} (${normalizeTeam(task.team)}班 / ${escapeHtml(task.assignee || '未定')})">
+          ${escapeHtml(label)}
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="month-cal-day-cell ${isToday ? 'today-cell' : ''}" 
+           onclick="openAddTaskModal({ date: '${dayYMD}', team: '${currentTeamFilter !== 'all' ? currentTeamFilter : ''}' })"
+           title="${calMonth}月${day}日にタスクを追加">
+        <div class="month-cal-day-header">
+          <span class="month-cal-day-num ${dayClass}">${day}</span>
+          <span class="day-quick-add-icon">＋</span>
+        </div>
+        <div class="month-cal-tasks-container">
+          ${tasksHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  // 翌月の余白マス
+  const totalCells = firstDay + daysInMonth;
+  const remainingCells = (7 - (totalCells % 7)) % 7;
+  for (let j = 1; j <= remainingCells; j++) {
+    html += `
+      <div class="month-cal-day-cell other-month">
+        <div class="month-cal-day-header">
+          <span class="month-cal-day-num">${j}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  grid.innerHTML = html;
+}
+
+// ユーティリティ: HTMLエスケープ
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // ✅ タスク内 ToDo リスト管理ロジック
 let currentTaskTodos = [];
 
@@ -282,40 +414,138 @@ document.getElementById('searchInput')?.addEventListener('input', (e) => {
 const taskModal = document.getElementById('taskModal');
 const enableSpecificDateCheckbox = document.getElementById('enableSpecificDate');
 const specificDateContainer = document.getElementById('specificDateContainer');
+const monthSelectContainer = document.getElementById('monthSelectContainer');
 
-if (enableSpecificDateCheckbox && specificDateContainer) {
+// 📅 日付指定モード ⇔ 月指定モードのUI切り替え ＆ 自動連動
+function toggleDateMode(isSpecificDate) {
+  if (enableSpecificDateCheckbox) {
+    enableSpecificDateCheckbox.checked = isSpecificDate;
+  }
+  if (specificDateContainer) {
+    specificDateContainer.style.display = isSpecificDate ? 'flex' : 'none';
+  }
+  if (monthSelectContainer) {
+    // 日付指定時は「開始月・終了月」UIを非表示にし、日付から自動計算
+    monthSelectContainer.style.display = isSpecificDate ? 'none' : 'flex';
+  }
+  if (isSpecificDate) {
+    syncMonthsFromDates();
+  }
+}
+
+if (enableSpecificDateCheckbox) {
   enableSpecificDateCheckbox.addEventListener('change', (e) => {
-    specificDateContainer.style.display = e.target.checked ? 'flex' : 'none';
+    toggleDateMode(e.target.checked);
   });
 }
 
-// タスク追加モーダル
-document.getElementById('addBtn')?.addEventListener('click', () => {
-  document.getElementById('taskForm').reset();
+// 日付から開始月・終了月を自動計算して反映
+function syncMonthsFromDates() {
+  const startDateVal = document.getElementById('taskStartDate')?.value;
+  const endDateVal = document.getElementById('taskEndDate')?.value;
+  const startMonthSelect = document.getElementById('taskStart');
+  const endMonthSelect = document.getElementById('taskEnd');
+
+  if (startDateVal) {
+    const sDate = new Date(startDateVal);
+    if (!isNaN(sDate.getTime()) && startMonthSelect) {
+      startMonthSelect.value = String(sDate.getMonth() + 1);
+    }
+  }
+  if (endDateVal) {
+    const eDate = new Date(endDateVal);
+    if (!isNaN(eDate.getTime()) && endMonthSelect) {
+      endMonthSelect.value = String(eDate.getMonth() + 1);
+    }
+  } else if (startDateVal && endMonthSelect) {
+    const sDate = new Date(startDateVal);
+    if (!isNaN(sDate.getTime())) {
+      endMonthSelect.value = String(sDate.getMonth() + 1);
+    }
+  }
+}
+
+// 🌟 タスク追加モーダル (直感作成 ＆ ユーザー情報自動補完)
+window.openAddTaskModal = function(options = {}) {
+  const form = document.getElementById('taskForm');
+  if (form) form.reset();
+
   document.getElementById('taskId').value = '';
-  document.getElementById('taskStartDate').value = '';
-  document.getElementById('taskEndDate').value = '';
   currentTaskTodos = [];
   renderTodoList();
-  if (enableSpecificDateCheckbox) enableSpecificDateCheckbox.checked = false;
-  if (specificDateContainer) specificDateContainer.style.display = 'none';
+
+  // 👤 担当者自動補完: 保存済みのユーザー名
+  const savedAuthor = localStorage.getItem('hope_user_author') || (typeof currentUser !== 'undefined' ? currentUser.author : '');
+  const assigneeInput = document.getElementById('taskAssignee');
+  if (assigneeInput) {
+    assigneeInput.value = savedAuthor || '';
+  }
+
+  // 🛠️ 担当班自動補完: options.team ➔ hope_user_team ➔ 現在のフィルタ ➔ FRP
+  const teamSelect = document.getElementById('taskTeam');
+  if (teamSelect) {
+    let targetTeam = options.team;
+    if (!targetTeam) {
+      const savedTeam = localStorage.getItem('hope_user_team') || (typeof currentUser !== 'undefined' ? currentUser.team : '');
+      if (savedTeam) {
+        targetTeam = savedTeam;
+      } else if (currentTeamFilter !== 'all') {
+        targetTeam = normalizeTeam(currentTeamFilter);
+      } else {
+        targetTeam = 'FRP';
+      }
+    }
+    teamSelect.value = normalizeTeam(targetTeam);
+  }
+
+  // 📅 日付・期間自動補完
+  const startDateInput = document.getElementById('taskStartDate');
+  const endDateInput = document.getElementById('taskEndDate');
+  const startMonthSelect = document.getElementById('taskStart');
+  const endMonthSelect = document.getElementById('taskEnd');
+
+  if (options.date) {
+    // 📆 月間カレンダー日付マス目タップ時：日付指定モードON、月選択は非表示＆自動入力
+    if (startDateInput) startDateInput.value = options.date;
+    if (endDateInput) endDateInput.value = options.date;
+    toggleDateMode(true);
+  } else {
+    // 🌐 年間ガントマス目タップ時 または 通常「＋タスク追加」ボタン時：月指定モード
+    if (startDateInput) startDateInput.value = '';
+    if (endDateInput) endDateInput.value = '';
+    toggleDateMode(false);
+
+    const targetMonth = options.month ? String(options.month) : String(calMonth || (new Date().getMonth() + 1));
+    if (startMonthSelect) startMonthSelect.value = targetMonth;
+    if (endMonthSelect) endMonthSelect.value = targetMonth;
+  }
+
   document.getElementById('modalTitle').textContent = 'タスク追加';
   document.getElementById('deleteModalBtn').style.display = 'none';
   if (taskModal) taskModal.classList.add('active');
+  const taskNameInput = document.getElementById('taskName');
+  if (taskNameInput) setTimeout(() => taskNameInput.focus(), 80);
+};
+
+// 「＋ タスク追加」ボタン
+document.getElementById('addBtn')?.addEventListener('click', () => {
+  openAddTaskModal();
 });
 
 // 日付選択時の月自動判定連動
 document.getElementById('taskStartDate')?.addEventListener('change', (e) => {
+  const endDateInput = document.getElementById('taskEndDate');
   if (e.target.value) {
-    const month = new Date(e.target.value).getMonth() + 1;
-    document.getElementById('taskStart').value = String(month);
+    if (endDateInput && !endDateInput.value) {
+      endDateInput.value = e.target.value;
+    }
+    syncMonthsFromDates();
   }
 });
 
 document.getElementById('taskEndDate')?.addEventListener('change', (e) => {
   if (e.target.value) {
-    const month = new Date(e.target.value).getMonth() + 1;
-    document.getElementById('taskEnd').value = String(month);
+    syncMonthsFromDates();
   }
 });
 
@@ -343,8 +573,7 @@ window.openEditModalById = function(id) {
   renderTodoList();
 
   const hasSpecificDate = Boolean(task.startDate || task.endDate);
-  if (enableSpecificDateCheckbox) enableSpecificDateCheckbox.checked = hasSpecificDate;
-  if (specificDateContainer) specificDateContainer.style.display = hasSpecificDate ? 'flex' : 'none';
+  toggleDateMode(hasSpecificDate);
 
   document.getElementById('taskStart').value = task.start;
   document.getElementById('taskEnd').value = task.end;
@@ -365,7 +594,7 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
   const id = document.getElementById('taskId').value || String(Date.now());
   const team = document.getElementById('taskTeam').value;
   const name = document.getElementById('taskName').value.trim();
-  const assignee = document.getElementById('taskAssignee').value.trim();
+  const assignee = document.getElementById('taskAssignee').value.trim() || '未定';
 
   const completedCount = currentTaskTodos.filter(t => t.completed).length;
   const calculatedProgress = currentTaskTodos.length > 0 
@@ -373,11 +602,24 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
     : 0;
 
   const useSpecificDate = enableSpecificDateCheckbox ? enableSpecificDateCheckbox.checked : false;
-  const startDate = useSpecificDate ? document.getElementById('taskStartDate').value : '';
-  const endDate = useSpecificDate ? document.getElementById('taskEndDate').value : '';
+  let startDate = '';
+  let endDate = '';
+  let start = Number(document.getElementById('taskStart').value);
+  let end = Number(document.getElementById('taskEnd').value);
 
-  const start = Number(document.getElementById('taskStart').value);
-  const end = Number(document.getElementById('taskEnd').value);
+  if (useSpecificDate) {
+    startDate = document.getElementById('taskStartDate').value;
+    endDate = document.getElementById('taskEndDate').value || startDate;
+    if (startDate) {
+      const sDate = new Date(startDate);
+      if (!isNaN(sDate.getTime())) start = sDate.getMonth() + 1;
+    }
+    if (endDate) {
+      const eDate = new Date(endDate);
+      if (!isNaN(eDate.getTime())) end = eDate.getMonth() + 1;
+    }
+  }
+
   const note = document.getElementById('taskNote').value.trim();
 
   const existingIndex = currentTasks.findIndex(t => t.id === id);
@@ -395,61 +637,47 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
   closeTaskModal();
 });
 
-// 🤖 AI連動による ToDo チェック ＆ 動的追加 API (完了 / 未完了進行中トグル対応)
-window.addOrCheckTodoByAi = function(taskId, todoText, isCompleted = true) {
-  if (!taskId || !todoText) return null;
-  const index = currentTasks.findIndex(t => t.id == taskId);
-  if (index < 0) return null;
+// 🌐 年間 ⇔ 📆 月間 ビュー切り替えイベント
+document.getElementById('viewToggleYear')?.addEventListener('click', () => {
+  currentViewMode = 'year';
+  document.getElementById('viewToggleYear')?.classList.add('active');
+  document.getElementById('viewToggleMonth')?.classList.remove('active');
+  const monthNav = document.getElementById('monthNavToolbar');
+  if (monthNav) monthNav.style.display = 'none';
+  render();
+});
 
-  const task = currentTasks[index];
-  let todos = Array.isArray(task.todos) ? [...task.todos] : [];
-  
-  let existingIndex = todos.findIndex(t => t.text.includes(todoText) || todoText.includes(t.text));
-  let isNew = false;
+document.getElementById('viewToggleMonth')?.addEventListener('click', () => {
+  currentViewMode = 'month';
+  document.getElementById('viewToggleMonth')?.classList.add('active');
+  document.getElementById('viewToggleYear')?.classList.remove('active');
+  const monthNav = document.getElementById('monthNavToolbar');
+  if (monthNav) monthNav.style.display = 'flex';
+  render();
+});
 
-  if (existingIndex >= 0) {
-    if (isCompleted) {
-      todos[existingIndex].completed = true;
-    }
-  } else {
-    todos.push({ text: todoText, completed: isCompleted });
-    isNew = true;
+// 📆 月間カレンダー ナビゲーション
+document.getElementById('prevMonthBtn')?.addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 1) {
+    calMonth = 12;
+    calYear--;
   }
+  render();
+});
 
-  const completedCount = todos.filter(t => t.completed).length;
-  const progressPercent = todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : (task.progress || 0);
-
-  currentTasks[index] = {
-    ...task,
-    todos: todos,
-    progress: progressPercent
-  };
-
-  saveTasks(currentTasks);
-  return { taskId: task.id, taskName: task.name, isNew: isNew, isCompleted: isCompleted, progress: progressPercent };
-};
-
-// 🤖 AI連動の取り消し API
-window.revertAiTaskUpdate = function(taskId, todoText) {
-  const index = currentTasks.findIndex(t => t.id === taskId);
-  if (index < 0) return;
-
-  const task = currentTasks[index];
-  let todos = Array.isArray(task.todos) ? [...task.todos] : [];
-
-  let existingIndex = todos.findIndex(t => t.text === todoText);
-  if (existingIndex >= 0) {
-    todos[existingIndex].completed = false;
+document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 12) {
+    calMonth = 1;
+    calYear++;
   }
+  render();
+});
 
-  const completedCount = todos.filter(t => t.completed).length;
-  const progressPercent = todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : 0;
-
-  currentTasks[index] = {
-    ...task,
-    todos: todos,
-    progress: progressPercent
-  };
-
-  saveTasks(currentTasks);
-};
+document.getElementById('todayMonthBtn')?.addEventListener('click', () => {
+  const d = new Date();
+  calYear = d.getFullYear();
+  calMonth = d.getMonth() + 1;
+  render();
+});

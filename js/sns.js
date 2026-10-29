@@ -6,7 +6,7 @@ let currentPosts = [];
 let firebaseDbPostsRef = null;
 let firebaseStorageRef = null;
 let currentPostTeamFilter = 'all';
-let currentUser = { author: '', avatar: '', id: '' };
+let currentUser = { author: '', avatar: '', id: '', team: 'FRP' };
 let pendingPostImages = []; // 送信待ち圧縮画像リスト (WebP Base64 DataURI)
 let pendingAvatarImage = ''; // 設定中のアバター画像 (2KB WebP)
 
@@ -33,6 +33,11 @@ function initPostsUser() {
   currentUser.id = getOrCreateUserId();
   const savedAuthor = localStorage.getItem('hope_user_author');
   const savedAvatar = localStorage.getItem('hope_user_avatar');
+  const savedTeam = localStorage.getItem('hope_user_team');
+
+  if (savedTeam) {
+    currentUser.team = savedTeam;
+  }
 
   if (savedAuthor) {
     currentUser.author = savedAuthor;
@@ -81,6 +86,8 @@ function openUserProfileModal(isFirstTime = false) {
   if (!modal) return;
 
   if (modalAuthorInput) modalAuthorInput.value = currentUser.author || '';
+  const modalTeamSelect = document.getElementById('modalTeamSelect');
+  if (modalTeamSelect) modalTeamSelect.value = currentUser.team || 'FRP';
   pendingAvatarImage = currentUser.avatar || '';
 
   if (profileAvatarPreview) {
@@ -329,6 +336,11 @@ function setupSnsEventListeners() {
 
       currentUser.author = author;
       currentUser.avatar = pendingAvatarImage || '';
+      const modalTeamSelect = document.getElementById('modalTeamSelect');
+      if (modalTeamSelect) {
+        currentUser.team = modalTeamSelect.value;
+        localStorage.setItem('hope_user_team', currentUser.team);
+      }
       localStorage.setItem('hope_user_author', author);
       localStorage.setItem('hope_user_avatar', currentUser.avatar);
 
@@ -377,48 +389,6 @@ function setupSnsEventListeners() {
       pendingPostImages = [];
       renderImagePreviews();
       closePostComposeModal();
-
-      // 🤖 バックグラウンド Gemini AI 解析の非同期実行
-      if (typeof analyzePostWithGemini === 'function' && selectedCategory !== '雑談' && selectedCategory !== '全体') {
-        setTimeout(async () => {
-          const aiResult = await analyzePostWithGemini(newPost);
-          if (aiResult) {
-            const pIdx = currentPosts.findIndex(p => p.id === newPost.id);
-            if (pIdx >= 0) {
-              if (aiResult.status === 'AUTO_UPDATED') {
-                currentPosts[pIdx].aiBadge = {
-                  type: 'auto',
-                  taskId: aiResult.taskId,
-                  taskName: aiResult.taskName,
-                  todoText: aiResult.todoText,
-                  isNew: aiResult.isNew,
-                  isCompleted: typeof aiResult.isCompleted === 'boolean' ? aiResult.isCompleted : true
-                };
-              } else if (aiResult.status === 'PROPOSAL') {
-                currentPosts[pIdx].aiBadge = {
-                  type: 'proposal',
-                  taskId: aiResult.taskId,
-                  taskName: aiResult.taskName,
-                  todoText: aiResult.todoText,
-                  isCompleted: typeof aiResult.isCompleted === 'boolean' ? aiResult.isCompleted : true
-                };
-              } else if (aiResult.status === 'ERROR') {
-                currentPosts[pIdx].aiBadge = {
-                  type: 'error',
-                  errorMsg: aiResult.errorMsg
-                };
-              } else if (aiResult.status === 'PROPOSAL_UNMATCHED') {
-                currentPosts[pIdx].aiBadge = {
-                  type: 'unmatched',
-                  reason: aiResult.reason
-                };
-              }
-              savePosts(currentPosts);
-              renderPostsTimeline(); // 🤖 AI解析完了後に投稿タイムライン画面を即時再レンダリング！
-            }
-          }
-        }, 100);
-      }
     });
   }
 
@@ -554,53 +524,6 @@ function renderPostsTimeline() {
       imagesHtml = `<div class="post-media-grid ${gridClass}">${imgs}</div>`;
     }
 
-    // 🤖 右側ミニ AI ボタン ＆ ポップオーバー詳細描画
-    let aiBadgeHtml = '';
-    if (post.aiBadge) {
-      const isDone = post.aiBadge.isCompleted !== false;
-      const statusIcon = isDone ? '✓' : ' ';
-      const badgeTitle = isDone ? '進捗自動更新' : '新規ToDo枠追加';
-      
-      let popoverContent = '';
-      if (post.aiBadge.type === 'auto') {
-        popoverContent = `
-          <div class="ai-pop-title">🤖 Gemini AI 自動連動</div>
-          <div class="ai-pop-item"><strong>対象タスク:</strong> ${escapeHtml(post.aiBadge.taskName)}</div>
-          <div class="ai-pop-item"><strong>処理内容:</strong> [${statusIcon}] ${escapeHtml(post.aiBadge.todoText)} (${badgeTitle})</div>
-          <button type="button" onclick="revertAiBadge('${post.id}')" class="ai-pop-revert-btn">↩️ AI更新を取り消す</button>
-        `;
-      } else if (post.aiBadge.type === 'proposal') {
-        popoverContent = `
-          <div class="ai-pop-title">🤖 Gemini AI 進捗提案</div>
-          <div class="ai-pop-item">「${escapeHtml(post.aiBadge.taskName)}」の進捗を更新しますか？</div>
-          <button type="button" onclick="applyProposalAiUpdate('${post.id}')" class="ai-pop-apply-btn">＋ 更新を適用する</button>
-        `;
-      } else if (post.aiBadge.type === 'error') {
-        popoverContent = `
-          <div class="ai-pop-title" style="color:#991b1b;">⚠️ Gemini API 通信状態</div>
-          <div class="ai-pop-item">${escapeHtml(post.aiBadge.errorMsg || '通信エラー')}</div>
-        `;
-      } else {
-        popoverContent = `
-          <div class="ai-pop-title">🤖 Gemini AI 解析結果</div>
-          <div class="ai-pop-item" style="color:#64748b;">この投稿は特定の作業タスクに該当しませんでした</div>
-        `;
-      }
-
-      const btnClass = post.aiBadge.type;
-
-      aiBadgeHtml = `
-        <div class="ai-badge-container">
-          <button type="button" class="ai-mini-badge-btn ${btnClass}" onclick="toggleAiDetailPopover('${post.id}')" title="AI連動詳細を見る">
-            <span>🤖 AI</span>
-          </button>
-          <div id="aiPopover_${post.id}" class="ai-detail-popover" style="display:none;">
-            ${popoverContent}
-          </div>
-        </div>
-      `;
-    }
-
     // リプライ一覧HTML生成 (各返信の横にも💬ボタンを配置)
     const repliesHtml = repliesList.map(rep => `
       <div class="x-reply-item">
@@ -634,7 +557,7 @@ function renderPostsTimeline() {
           <!-- 📷 写真画像添付エリア -->
           ${imagesHtml}
 
-          <!-- ❤️ いいね ＆ 💬 リプライ ＆ 🤖 AI アクションバー -->
+          <!-- ❤️ いいね ＆ 💬 リプライ アクションバー -->
           <div class="x-post-actions-row">
             <button class="x-action-btn" onclick="toggleReplyBox('${post.id}')">
               <span class="action-icon">💬</span>
@@ -644,7 +567,6 @@ function renderPostsTimeline() {
               <span class="action-icon">${isLiked ? '❤️' : '🤍'}</span>
               <span>${likeCount > 0 ? likeCount : 'いいね'}</span>
             </button>
-            ${aiBadgeHtml}
           </div>
 
           <!-- 💬 返信一覧 (例: かんぺき) -->
@@ -761,47 +683,5 @@ window.deletePostById = function(postId) {
   if (confirm('この投稿を削除してもよろしいですか？')) {
     const newPosts = currentPosts.filter(p => p.id !== postId);
     savePosts(newPosts);
-  }
-};
-
-// 🤖 AI 提案手動承認アクション
-window.applyProposalAiUpdate = function(postId) {
-  const pIdx = currentPosts.findIndex(p => p.id === postId);
-  if (pIdx < 0) return;
-  const post = currentPosts[pIdx];
-  if (!post.aiBadge || post.aiBadge.type !== 'proposal') return;
-
-  const updatedInfo = window.addOrCheckTodoByAi(post.aiBadge.taskId, post.aiBadge.todoText);
-  if (updatedInfo) {
-    currentPosts[pIdx].aiBadge = {
-      type: 'auto',
-      taskId: post.aiBadge.taskId,
-      taskName: updatedInfo.taskName,
-      todoText: post.aiBadge.todoText,
-      isNew: updatedInfo.isNew
-    };
-    savePosts(currentPosts);
-  }
-};
-
-// 🤖 AI 更新取り消しアクション
-window.revertAiBadge = function(postId) {
-  const pIdx = currentPosts.findIndex(p => p.id === postId);
-  if (pIdx < 0) return;
-  const post = currentPosts[pIdx];
-  if (post.aiBadge && post.aiBadge.taskId && post.aiBadge.todoText) {
-    window.revertAiTaskUpdate(post.aiBadge.taskId, post.aiBadge.todoText);
-  }
-  delete currentPosts[pIdx].aiBadge;
-  savePosts(currentPosts);
-};
-
-// 🤖 AI 詳細ポップオーバー開閉トグル
-window.toggleAiDetailPopover = function(postId) {
-  const popover = document.getElementById(`aiPopover_${postId}`);
-  if (popover) {
-    const isVisible = popover.style.display === 'block';
-    document.querySelectorAll('.ai-detail-popover').forEach(p => p.style.display = 'none');
-    popover.style.display = isVisible ? 'none' : 'block';
   }
 };
