@@ -606,3 +606,113 @@
 .team-timeline-cell-tap:hover {
   background: rgba(59, 130, 246, 0.08);
 }
+
+/* 📱 スマホ対応: 年間 ⇔ 月間 カレンダー切り替え ＆ 月間グリッド最適化 */
+@media (max-width: 768px) {
+  /* 🌐 年間 ⇔ 📆 月間 ビュー切り替えトグルを最上段＆全幅に押しやすく展開 */
+  .view-toggle-group {
+    display: flex;
+    width: 100%;
+    margin-left: 0;
+    margin-bottom: 2px;
+    background: #e2e8f0;
+    padding: 3px;
+    border-radius: 10px;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+
+  .view-toggle-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 40px; /* スマホで確実・快適にタップできる高さ */
+    border-radius: 8px;
+  }
+
+  .view-toggle-btn.active {
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.15);
+  }
+
+  /* 📆 月移動ナビゲーションバー */
+  .month-nav-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+
+  .month-nav-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .month-nav-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .month-today-btn {
+    padding: 6px 14px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .month-nav-label {
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .month-nav-hint {
+    font-size: 11px;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* 📆 月間カレンダーグリッド */
+  .container {
+    padding: 8px 4px;
+    border-radius: 8px;
+  }
+
+  .month-cal-header-cell {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+
+  .month-cal-days-grid {
+    grid-auto-rows: minmax(70px, auto);
+  }
+
+  .month-cal-day-cell {
+    padding: 3px 2px;
+    min-height: 70px;
+  }
+
+  .month-cal-day-num {
+    font-size: 11px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .month-cal-day-cell.today-cell .month-cal-day-num {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+
+  .month-cal-task-chip {
+    padding: 2px 4px;
+    font-size: 9px;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    border-radius: 3px;
+  }
+
+  /* 年間ガントチャート時 */
+  .gantt-wrapper {
+    min-width: 900px;
+  }
+}
