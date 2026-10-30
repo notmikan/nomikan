@@ -483,44 +483,57 @@
 .month-cal-header-cell.sunday { color: #ef4444; }
 .month-cal-header-cell.saturday { color: #3b82f6; }
 
-.month-cal-days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: minmax(110px, auto);
+/* 📆 週ごとの行 */
+.month-cal-weeks-container {
+  display: flex;
+  flex-direction: column;
 }
 
-.month-cal-day-cell {
-  border-right: 1px solid #f1f5f9;
+.month-cal-week {
+  position: relative;
+  min-height: 105px;
   border-bottom: 1px solid #f1f5f9;
+}
+.month-cal-week:last-child {
+  border-bottom: none;
+}
+
+/* 7マスの背景グリッド */
+.month-cal-week-bg {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.month-cal-day-bg {
+  border-right: 1px solid #f1f5f9;
   padding: 6px;
   position: relative;
   background: #ffffff;
   transition: background 0.15s ease;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
 }
-
-.month-cal-day-cell:nth-child(7n) { border-right: none; }
-
-.month-cal-day-cell:hover {
+.month-cal-day-bg:last-child {
+  border-right: none;
+}
+.month-cal-day-bg:hover {
   background: #f8fafc;
 }
-
-.month-cal-day-cell:hover .day-quick-add-icon {
+.month-cal-day-bg:hover .day-quick-add-icon {
   opacity: 1;
 }
-
-.month-cal-day-cell.other-month {
+.month-cal-day-bg.other-month {
   background: #fafafa;
   opacity: 0.45;
 }
-
-.month-cal-day-cell.today-cell {
+.month-cal-day-bg.today-cell {
   background: #f0fdf4;
 }
-
-.month-cal-day-cell.today-cell .month-cal-day-num {
+.month-cal-day-bg.today-cell .month-cal-day-num {
   background: #166534;
   color: #ffffff;
   border-radius: 50%;
@@ -536,6 +549,7 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 4px;
+  pointer-events: none;
 }
 
 .month-cal-day-num {
@@ -548,7 +562,6 @@
   align-items: center;
   justify-content: center;
 }
-
 .month-cal-day-num.sunday { color: #ef4444; }
 .month-cal-day-num.saturday { color: #3b82f6; }
 
@@ -561,18 +574,27 @@
   border-radius: 4px;
 }
 
-.month-cal-tasks-container {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  overflow: hidden;
+/* 📆 連続帯イベントグリッド */
+.month-cal-week-events {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 24px;
+  gap: 3px 0;
+  padding-top: 28px;
+  padding-bottom: 6px;
+  pointer-events: none;
+  z-index: 2;
 }
 
-.month-cal-task-chip {
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+.month-cal-event-bar {
+  pointer-events: auto;
+  margin: 0 2px;
+  padding: 0 6px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
   font-weight: 600;
   color: #ffffff;
   white-space: nowrap;
@@ -581,12 +603,37 @@
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   transition: transform 0.1s, filter 0.1s;
+  border-radius: 4px;
 }
 
-.month-cal-task-chip:hover {
+.month-cal-event-bar:hover {
   transform: translateY(-1px);
   filter: brightness(1.08);
   z-index: 10;
+}
+
+/* 連続帯の端処理 (週またぎ・接続) */
+.month-cal-event-bar.is-start.is-end {
+  border-radius: 4px;
+}
+.month-cal-event-bar.is-start:not(.is-end) {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: 0;
+}
+.month-cal-event-bar.is-end:not(.is-start) {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: 0;
+}
+.month-cal-event-bar:not(.is-start):not(.is-end) {
+  border-radius: 0;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* 🌐 年間ガントチャート空きマスのクリック対応 */
@@ -682,13 +729,12 @@
     font-size: 11px;
   }
 
-  .month-cal-days-grid {
-    grid-auto-rows: minmax(70px, auto);
+  .month-cal-week {
+    min-height: 72px;
   }
 
-  .month-cal-day-cell {
+  .month-cal-day-bg {
     padding: 3px 2px;
-    min-height: 70px;
   }
 
   .month-cal-day-num {
@@ -697,18 +743,23 @@
     height: 18px;
   }
 
-  .month-cal-day-cell.today-cell .month-cal-day-num {
+  .month-cal-day-bg.today-cell .month-cal-day-num {
     width: 18px;
     height: 18px;
     font-size: 10px;
   }
 
-  .month-cal-task-chip {
-    padding: 2px 4px;
+  .month-cal-week-events {
+    padding-top: 22px;
+    grid-auto-rows: 19px;
+    gap: 2px 0;
+  }
+
+  .month-cal-event-bar {
+    height: 18px;
     font-size: 9px;
-    line-height: 1.2;
-    margin-bottom: 2px;
-    border-radius: 3px;
+    padding: 0 4px;
+    line-height: 18px;
   }
 
   /* 年間ガントチャート時 */

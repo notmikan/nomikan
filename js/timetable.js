@@ -4,7 +4,7 @@
 
 let currentTeamFilter = 'all';
 let currentQuery = '';
-let currentViewMode = 'year'; // 'year' | 'month'
+let currentViewMode = 'month'; // 'month' (初期デフォルト) | 'year'
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth() + 1;
 
@@ -216,7 +216,7 @@ function renderDetailed(filteredTasks) {
   grid.innerHTML = html;
 }
 
-// 📆 【月間カレンダーモード】(日別グリッド ＆ 日付マス目タップ作成)
+// 📆 【月間カレンダーモード】(連続した日程を帯状バーで表示)
 function renderMonthlyCalendar(filteredTasks) {
   const grid = document.getElementById('ganttGrid');
   if (!grid) return;
@@ -229,11 +229,161 @@ function renderMonthlyCalendar(filteredTasks) {
   const today = new Date();
   const todayYMD = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const firstDay = new Date(calYear, calMonth - 1, 1).getDay();
+  const firstDay = new Date(calYear, calMonth - 1, 1).getDay(); // 0(日)〜6(土)
   const daysInMonth = new Date(calYear, calMonth, 0).getDate();
   const prevMonthLastDate = new Date(calYear, calMonth - 1, 0).getDate();
 
-  let html = `
+  // 全日数の配列構築 (前月余白 + 当月 + 翌月余白)
+  const allDays = [];
+
+  // 前月余白
+  for (let i = 0; i < firstDay; i++) {
+    const dayNum = prevMonthLastDate - firstDay + i + 1;
+    const m = calMonth === 1 ? 12 : calMonth - 1;
+    const y = calMonth === 1 ? calYear - 1 : calYear;
+    const ymd = `${y}-${String(m).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    allDays.push({ dayNum, ymd, isCurrentMonth: false, dayOfWeek: i });
+  }
+
+  // 当月
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ymd = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayOfWeek = (firstDay + day - 1) % 7;
+    allDays.push({ dayNum: day, ymd, isCurrentMonth: true, dayOfWeek });
+  }
+
+  // 翌月余白 (7の倍数になるまで)
+  const remaining = (7 - (allDays.length % 7)) % 7;
+  for (let j = 1; j <= remaining; j++) {
+    const m = calMonth === 12 ? 1 : calMonth + 1;
+    const y = calMonth === 12 ? calYear + 1 : calYear;
+    const ymd = `${y}-${String(m).padStart(2, '0')}-${String(j).padStart(2, '0')}`;
+    const dayOfWeek = allDays.length % 7;
+    allDays.push({ dayNum: j, ymd, isCurrentMonth: false, dayOfWeek });
+  }
+
+  // 7日単位で週に分割
+  const weeks = [];
+  for (let i = 0; i < allDays.length; i += 7) {
+    weeks.push(allDays.slice(i, i + 7));
+  }
+
+  // カレンダー対象タスク (具体的な日付があるもの)
+  const validTasks = filteredTasks.filter(task => Boolean(task.startDate || task.endDate));
+
+  let weeksHtml = '';
+
+  weeks.forEach(week => {
+    const weekStart = week[0].ymd;
+    const weekEnd = week[6].ymd;
+
+    // この週に属するタスクセグメントを抽出
+    const weekTasks = [];
+    validTasks.forEach(task => {
+      const tStart = task.startDate || task.endDate;
+      const tEnd = task.endDate || task.startDate;
+
+      if (tStart <= weekEnd && tEnd >= weekStart) {
+        // 週内での開始・終了日付
+        const segStart = tStart < weekStart ? weekStart : tStart;
+        const segEnd = tEnd > weekEnd ? weekEnd : tEnd;
+
+        const startIdx = week.findIndex(d => d.ymd === segStart);
+        const endIdx = week.findIndex(d => d.ymd === segEnd);
+
+        if (startIdx >= 0 && endIdx >= 0) {
+          const colStart = startIdx + 1; // 1〜7 (CSS Grid)
+          const colSpan = endIdx - startIdx + 1;
+          const isStart = (tStart >= weekStart);
+          const isEnd = (tEnd <= weekEnd);
+
+          weekTasks.push({
+            task,
+            colStart,
+            colSpan,
+            colEnd: colStart + colSpan - 1,
+            isStart,
+            isEnd
+          });
+        }
+      }
+    });
+
+    // レーン（行）の割り当て: 重なり防止
+    // 開始が早い順、同じなら期間が長い順にソート
+    weekTasks.sort((a, b) => {
+      if (a.colStart !== b.colStart) return a.colStart - b.colStart;
+      return b.colSpan - a.colSpan;
+    });
+
+    const lanes = [];
+    weekTasks.forEach(item => {
+      let assignedRow = -1;
+      for (let r = 0; r < lanes.length; r++) {
+        if (item.colStart > lanes[r]) {
+          assignedRow = r;
+          break;
+        }
+      }
+      if (assignedRow === -1) {
+        assignedRow = lanes.length;
+        lanes.push(item.colEnd);
+      } else {
+        lanes[assignedRow] = item.colEnd;
+      }
+      item.row = assignedRow + 1;
+    });
+
+    // 1. 背景マスHTML
+    const daysBgHtml = week.map(day => {
+      const isToday = day.ymd === todayYMD;
+      const dayClass = day.dayOfWeek === 0 ? 'sunday' : (day.dayOfWeek === 6 ? 'saturday' : '');
+      const otherClass = day.isCurrentMonth ? '' : 'other-month';
+      return `
+        <div class="month-cal-day-bg ${otherClass} ${isToday ? 'today-cell' : ''}"
+             onclick="openAddTaskModal({ date: '${day.ymd}', team: '${currentTeamFilter !== 'all' ? currentTeamFilter : ''}' })"
+             title="${day.ymd} にタスクを追加">
+          <div class="month-cal-day-header">
+            <span class="month-cal-day-num ${dayClass}">${day.dayNum}</span>
+            <span class="day-quick-add-icon">＋</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 2. イベントバーHTML
+    const eventRowsCount = Math.max(lanes.length, 1);
+    const eventsHtml = weekTasks.map(item => {
+      const teamClass = `bg-${normalizeTeam(item.task.team)}`;
+      const startCap = item.isStart ? 'is-start' : '';
+      const endCap = item.isEnd ? 'is-end' : '';
+      const isPeriod = Boolean(item.task.startDate && item.task.endDate && item.task.startDate !== item.task.endDate);
+      const icon = (item.isStart && isPeriod) ? '📅 ' : '';
+      return `
+        <div class="month-cal-event-bar ${teamClass} ${startCap} ${endCap}"
+             style="grid-column: ${item.colStart} / span ${item.colSpan}; grid-row: ${item.row};"
+             onclick="event.stopPropagation(); openEditModalById('${item.task.id}')"
+             title="${escapeHtml(item.task.name)} (${normalizeTeam(item.task.team)}班 / ${escapeHtml(item.task.assignee || '未定')})">
+          <span class="event-title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${icon}${escapeHtml(item.task.name)}
+          </span>
+        </div>
+      `;
+    }).join('');
+
+    weeksHtml += `
+      <div class="month-cal-week">
+        <div class="month-cal-week-bg">
+          ${daysBgHtml}
+        </div>
+        <div class="month-cal-week-events" style="grid-template-rows: repeat(${eventRowsCount}, minmax(22px, auto));">
+          ${eventsHtml}
+        </div>
+      </div>
+    `;
+  });
+
+  const html = `
     <div class="monthly-calendar-wrapper">
       <div class="month-cal-header-row">
         <div class="month-cal-header-cell sunday">日</div>
@@ -244,80 +394,8 @@ function renderMonthlyCalendar(filteredTasks) {
         <div class="month-cal-header-cell">金</div>
         <div class="month-cal-header-cell saturday">土</div>
       </div>
-      <div class="month-cal-days-grid">
-  `;
-
-  // 前月の余白マス
-  for (let i = 0; i < firstDay; i++) {
-    const dayNum = prevMonthLastDate - firstDay + i + 1;
-    html += `
-      <div class="month-cal-day-cell other-month">
-        <div class="month-cal-day-header">
-          <span class="month-cal-day-num">${dayNum}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  // 当月の日付マス
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dayYMD = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayOfWeek = (firstDay + day - 1) % 7;
-    const isToday = dayYMD === todayYMD;
-    const dayClass = dayOfWeek === 0 ? 'sunday' : (dayOfWeek === 6 ? 'saturday' : '');
-
-    // 当日に該当するタスクを抽出（※カレンダーには具体的な日付が指定されたタスクのみを表示）
-    const dayTasks = filteredTasks.filter(task => {
-      if (!task.startDate && !task.endDate) {
-        return false; // 日付未指定のタスク（年間ガント専用）はカレンダーに含めない
-      }
-      const start = task.startDate || task.endDate;
-      const end = task.endDate || task.startDate;
-      return start <= dayYMD && dayYMD <= end;
-    });
-
-    let tasksHtml = '';
-    dayTasks.forEach(task => {
-      const isPeriod = Boolean(task.startDate && task.endDate && task.startDate !== task.endDate);
-      const label = isPeriod ? `📅 ${task.name}` : task.name;
-      tasksHtml += `
-        <div class="month-cal-task-chip bg-${normalizeTeam(task.team)}" 
-             onclick="event.stopPropagation(); openEditModalById('${task.id}')"
-             title="${escapeHtml(task.name)} (${normalizeTeam(task.team)}班 / ${escapeHtml(task.assignee || '未定')})">
-          ${escapeHtml(label)}
-        </div>
-      `;
-    });
-
-    html += `
-      <div class="month-cal-day-cell ${isToday ? 'today-cell' : ''}" 
-           onclick="openAddTaskModal({ date: '${dayYMD}', team: '${currentTeamFilter !== 'all' ? currentTeamFilter : ''}' })"
-           title="${calMonth}月${day}日にタスクを追加">
-        <div class="month-cal-day-header">
-          <span class="month-cal-day-num ${dayClass}">${day}</span>
-          <span class="day-quick-add-icon">＋</span>
-        </div>
-        <div class="month-cal-tasks-container">
-          ${tasksHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  // 翌月の余白マス
-  const totalCells = firstDay + daysInMonth;
-  const remainingCells = (7 - (totalCells % 7)) % 7;
-  for (let j = 1; j <= remainingCells; j++) {
-    html += `
-      <div class="month-cal-day-cell other-month">
-        <div class="month-cal-day-header">
-          <span class="month-cal-day-num">${j}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  html += `
+      <div class="month-cal-weeks-container">
+        ${weeksHtml}
       </div>
     </div>
   `;

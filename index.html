@@ -32,10 +32,10 @@
     <div class="header-brand">
       <h1 class="app-title"><img src="icon.webp" alt="HoPE" class="app-logo-img" width="24" height="24" style="width: 24px; height: 24px; max-width: 24px; max-height: 24px; object-fit: contain; flex-shrink: 0;"> <span>HoPE</span></h1>
       <nav class="app-tabs">
-        <button class="nav-tab active" data-tab="home">ホーム</button>
-        <button class="nav-tab" data-tab="timetable">タイムテーブル</button>
+        <button class="nav-tab active" data-tab="timetable">スケジュール</button>
+        <button class="nav-tab" data-tab="home">チャット</button>
         <button class="nav-tab" data-tab="inventory">在庫</button>
-        <button class="nav-tab" data-tab="budget">サマリー <span class="tab-badge">Dev</span></button>
+        <button class="nav-tab" data-tab="budget">サマリー</button>
       </nav>
     </div>
 
@@ -51,8 +51,8 @@
   <!-- メインコンテンツエリア -->
   <main class="main-content">
 
-    <!-- ホーム（タイムライン）ビュー -->
-    <section id="homeTab" class="tab-content active">
+    <!-- ホーム（タイムライン / チャット）ビュー -->
+    <section id="homeTab" class="tab-content">
       <div class="timeline-section">
         <div class="x-tab-header">
           <button class="x-tab-item active" data-post-team="all">すべて</button>
@@ -69,8 +69,8 @@
       </div>
     </section>
 
-    <!-- タイムテーブルタブビュー -->
-    <section id="timetableTab" class="tab-content">
+    <!-- スケジュール（旧タイムテーブル）タブビュー -->
+    <section id="timetableTab" class="tab-content active">
       <div class="sub-toolbar">
         <div class="toolbar-left">
           <div class="filter-group">
@@ -82,10 +82,10 @@
             <button class="filter-btn" data-team="電装">電装</button>
           </div>
 
-          <!-- 🌐 年間 ⇔ 📆 月間 ビュー切り替えトグル -->
+          <!-- 年間 ⇔ 月間 ビュー切り替えトグル -->
           <div class="view-toggle-group">
-            <button type="button" class="view-toggle-btn active" id="viewToggleYear">🌐 年間</button>
-            <button type="button" class="view-toggle-btn" id="viewToggleMonth">📆 月間</button>
+            <button type="button" class="view-toggle-btn active" id="viewToggleMonth">月間</button>
+            <button type="button" class="view-toggle-btn" id="viewToggleYear">年間</button>
           </div>
         </div>
 
@@ -98,14 +98,13 @@
       </div>
 
       <!-- 📆 月間カレンダー専用 月移動ツールバー (月間モード時のみ表示) -->
-      <div id="monthNavToolbar" class="month-nav-toolbar" style="display: none;">
+      <div id="monthNavToolbar" class="month-nav-toolbar" style="display: flex;">
         <div class="month-nav-controls">
           <button type="button" class="month-nav-btn" id="prevMonthBtn" title="前月">◀</button>
           <span class="month-nav-label" id="currentMonthLabel">2026年 11月</span>
           <button type="button" class="month-nav-btn" id="nextMonthBtn" title="次月">▶</button>
           <button type="button" class="month-today-btn" id="todayMonthBtn">今月</button>
         </div>
-        <div class="month-nav-hint">💡 日付指定タスクのみ表示（マス目タップで即追加）</div>
       </div>
 
       <!-- ガントチャートコンテナ -->
@@ -415,7 +414,7 @@
   </div>
 
   <!-- 📱 右下固定 浮遊投稿ボタン (FAB) -->
-  <button class="x-fab-post-btn" id="openComposeFabBtn" title="投稿">
+  <button class="x-fab-post-btn" id="openComposeFabBtn" title="投稿" style="display: none;">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -424,16 +423,7 @@
 
   <!-- 📱 スマホ専用 固定ボトムナビゲーションバー (X風 モノトーン SVG) -->
   <nav class="mobile-bottom-nav">
-    <button class="nav-item active" data-tab="home">
-      <span class="nav-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-      </span>
-      <span class="nav-label">ホーム</span>
-    </button>
-    <button class="nav-item" data-tab="timetable">
+    <button class="nav-item active" data-tab="timetable">
       <span class="nav-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -442,7 +432,15 @@
           <line x1="3" y1="10" x2="21" y2="10"></line>
         </svg>
       </span>
-      <span class="nav-label">タイムテーブル</span>
+      <span class="nav-label">スケジュール</span>
+    </button>
+    <button class="nav-item" data-tab="home">
+      <span class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </span>
+      <span class="nav-label">チャット</span>
     </button>
     <button class="nav-item" data-tab="inventory">
       <span class="nav-icon">
