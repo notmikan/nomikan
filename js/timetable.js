@@ -104,7 +104,13 @@ function renderCompact(filteredTasks) {
           </div>
     `;
 
-    teamTasks.forEach(task => {
+    // 期間タスク（横帯バー）と単日タスク（1日ドット）を分離
+    const isSingleDay = (t) => Boolean(t.startDate && (!t.endDate || t.startDate === t.endDate));
+    const spanTasks = teamTasks.filter(t => !isSingleDay(t));
+    const singleTasks = teamTasks.filter(t => isSingleDay(t));
+
+    // 1. 期間タスク（長期製作バー）を描画
+    spanTasks.forEach(task => {
       const startCol = monthToIndex(task.start);
       const endCol = monthToIndex(task.end) + 1;
 
@@ -112,15 +118,57 @@ function renderCompact(filteredTasks) {
         <div class="gantt-span-bar bg-${normalizeTeam(task.team)}" 
              style="grid-column: ${startCol} / ${endCol};" 
              onclick="event.stopPropagation(); openEditModalById('${task.id}')">
-          ${task.name}
+          ${escapeHtml(task.name)}
           <div class="tooltip">
-            <strong>${task.name}</strong><br>
-            担当: ${task.assignee}<br>
-            期間: ${task.start}月〜${task.end}月<br>
-            備考: ${task.note || 'なし'}
+            <strong>${escapeHtml(task.name)}</strong><br>
+            担当: ${escapeHtml(task.assignee || '未定')}<br>
+            期間: ${task.startDate && task.endDate ? `${formatDateShort(task.startDate)}〜${formatDateShort(task.endDate)}` : `${task.start}月〜${task.end}月`}<br>
+            備考: ${escapeHtml(task.note || 'なし')}
           </div>
         </div>
       `;
+    });
+
+    // 2. 1日しかない予定（単日ドット）を月ごとにグループ化して描画（縦積みを防ぎ横並びに集約）
+    MONTHS.forEach(m => {
+      const mTasks = singleTasks.filter(t => {
+        if (t.startDate) {
+          const d = new Date(t.startDate);
+          return !isNaN(d.getTime()) && (d.getMonth() + 1) === m;
+        }
+        return t.start === m;
+      });
+
+      if (mTasks.length > 0) {
+        const col = monthToIndex(m);
+        html += `
+          <div class="gantt-dots-container" style="grid-column: ${col} / span 1;">
+            ${mTasks.map(task => {
+              let dayText = '●';
+              let dateText = `${m}月`;
+              if (task.startDate) {
+                const d = new Date(task.startDate);
+                if (!isNaN(d.getTime())) {
+                  dayText = d.getDate();
+                  dateText = formatDateShort(task.startDate);
+                }
+              }
+              return `
+                <div class="gantt-dot-badge bg-${normalizeTeam(task.team)}" 
+                     onclick="event.stopPropagation(); openEditModalById('${task.id}')">
+                  <span class="dot-day-num">${dayText}</span>
+                  <div class="tooltip">
+                    <strong>${escapeHtml(task.name)}</strong><br>
+                    日付: ${dateText}<br>
+                    担当: ${escapeHtml(task.assignee || '未定')}<br>
+                    備考: ${escapeHtml(task.note || 'なし')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
     });
 
     html += `
@@ -134,6 +182,7 @@ function renderCompact(filteredTasks) {
 }
 
 // 【各班詳細・検索モード】 (時系列昇順ソート＆スマートカード表示)
+// 📋 【Notion/Linear風 月別スマートタイムライン】(無駄なバッジを削ぎ落とし時系列で整理)
 function renderDetailed(filteredTasks) {
   const grid = document.getElementById('ganttGrid');
   if (!grid) return;
@@ -149,64 +198,94 @@ function renderDetailed(filteredTasks) {
     return;
   }
 
-  // 開始月（または日付）の早い順に時系列昇順ソート (重複なし)
+  // 月番号から期首インデックスへの変換: 8月=1, 9月=2 ... 12月=5, 1月=6 ... 7月=12
+  function monthToFiscalOrder(m) {
+    const num = Number(m);
+    return num >= 8 ? num - 7 : num + 5;
+  }
+
+  // 時系列ソート
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const sA = monthToIndex(a.start);
-    const sB = monthToIndex(b.start);
-    if (sA !== sB) return sA - sB;
-    return monthToIndex(a.end) - monthToIndex(b.end);
+    if (a.startDate && b.startDate) return a.startDate.localeCompare(b.startDate);
+    if (a.startDate) {
+      const aM = new Date(a.startDate).getMonth() + 1;
+      return monthToFiscalOrder(aM) - monthToFiscalOrder(b.start);
+    }
+    if (b.startDate) {
+      const bM = new Date(b.startDate).getMonth() + 1;
+      return monthToFiscalOrder(a.start) - monthToFiscalOrder(bM);
+    }
+    const orderDiff = monthToFiscalOrder(a.start) - monthToFiscalOrder(b.start);
+    if (orderDiff !== 0) return orderDiff;
+    return monthToFiscalOrder(a.end) - monthToFiscalOrder(b.end);
   });
 
-  let html = `<div class="task-cards-grid">`;
-
+  // 月ごとにグループ化
+  const groups = new Map();
   sortedTasks.forEach(task => {
-    const teamName = normalizeTeam(task.team);
-    
-    // 期間表示テキスト
-    const dateText = (task.startDate && task.endDate)
-      ? `${formatDateShort(task.startDate)} 〜 ${formatDateShort(task.endDate)}`
-      : `${task.start}月 〜 ${task.end}月`;
+    let m = task.start;
+    let yearPrefix = '';
+    if (task.startDate) {
+      const d = new Date(task.startDate);
+      if (!isNaN(d.getTime())) {
+        m = d.getMonth() + 1;
+        yearPrefix = `${d.getFullYear()}年 `;
+      }
+    }
+    const groupKey = `${m}月`;
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, { month: m, yearPrefix, tasks: [] });
+    }
+    groups.get(groupKey).tasks.push(task);
+  });
 
-    // ToDoリストから進捗率(%)を動的計算 (または手動設定値)
-    const todos = task.todos || [];
-    let progress = typeof task.progress === 'number' ? task.progress : 0;
-    if (todos.length > 0) {
+  let html = `<div class="timeline-smart-container">`;
+
+  groups.forEach((group, groupKey) => {
+    html += `
+      <div class="timeline-month-section">
+        <div class="timeline-month-header">
+          <div class="timeline-month-pill">${groupKey}</div>
+        </div>
+        <div class="timeline-items-list">
+    `;
+
+    group.tasks.forEach(task => {
+      const teamName = normalizeTeam(task.team);
+      const isPeriod = Boolean(task.startDate && task.endDate && task.startDate !== task.endDate);
+      const dateText = (task.startDate && task.endDate)
+        ? (isPeriod ? `${formatDateShort(task.startDate)} 〜 ${formatDateShort(task.endDate)}` : formatDateShort(task.startDate))
+        : `${task.start}月 〜 ${task.end}月`;
+
+      const todos = task.todos || [];
+      const totalCount = todos.length;
       const completedCount = todos.filter(t => t.completed).length;
-      progress = Math.round((completedCount / todos.length) * 100);
-    }
+      const isAllCompleted = totalCount > 0 && completedCount === totalCount;
+      const countLabel = totalCount > 0 ? `(${completedCount}/${totalCount})` : '';
 
-    let statusClass = 'in-progress';
-    let statusLabel = `⚡ 進行中 (${progress}%)`;
-    if (progress === 100) {
-      statusClass = 'completed';
-      statusLabel = '✓ 完了';
-    } else if (progress === 0) {
-      statusClass = 'not-started';
-      statusLabel = '未着手';
-    }
+      // 「全体」タブでの検索時のみ班バッジを表示。個別班選択時は余計なノイズを完全に削ぎ落とす！
+      const showTeamBadge = (currentTeamFilter === 'all');
+
+      html += `
+        <div class="timeline-item team-item-${teamName}" onclick="openEditModalById('${task.id}')" title="クリックして詳細・ToDo">
+          <div class="timeline-item-node"></div>
+          <div class="timeline-item-date">${dateText}</div>
+          <div class="timeline-item-body">
+            <div class="timeline-item-title-row">
+              <span class="timeline-item-title">${escapeHtml(task.name)}</span>
+              ${showTeamBadge ? `<span class="badge badge-${teamName}" style="font-size: 10px; padding: 1px 6px;">${teamName}</span>` : ''}
+            </div>
+            ${task.note ? `<div class="timeline-item-note">📝 ${escapeHtml(task.note)}</div>` : ''}
+          </div>
+          <div class="timeline-item-meta">
+            ${task.assignee ? `<span class="timeline-item-assignee">👤 ${escapeHtml(task.assignee)}</span>` : ''}
+            ${isAllCompleted ? `<span class="timeline-item-status completed">✓ 完了 ${countLabel}</span>` : (totalCount > 0 ? `<span style="font-size: 11px; font-weight: 600; color: #64748b; font-feature-settings: 'tnum';">${countLabel}</span>` : '')}
+          </div>
+        </div>
+      `;
+    });
 
     html += `
-      <div class="task-detail-card team-border-${teamName}" onclick="openEditModalById('${task.id}')" title="クリックして詳細・作業手順">
-        <div class="card-header-row">
-          <div class="card-task-title">${escapeHtml(task.name)}</div>
-          <span class="card-duration-tag">${dateText}</span>
-        </div>
-        
-        <div class="card-meta-info">
-          <span class="card-assignee-text">
-            <span class="badge badge-${teamName}">${teamName}班</span>
-            <span>👤 ${escapeHtml(task.assignee)}</span>
-          </span>
-          <span class="status-badge ${statusClass}">${statusLabel}</span>
-        </div>
-
-        ${task.note ? `<div style="font-size: 11px; color: #b45309; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px;">📝 ${escapeHtml(task.note)}</div>` : ''}
-
-        <!-- 📊 進捗プログレスメーター -->
-        <div class="card-progress-container">
-          <div class="card-progress-bar-bg">
-            <div class="card-progress-bar-fill" style="width: ${progress}%;"></div>
-          </div>
         </div>
       </div>
     `;
@@ -413,64 +492,169 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// ✅ タスク内 ToDo リスト管理ロジック
+// ✅ タスク内 ToDo リスト管理ロジック (インライン連続追加・他タスク一括コピー・エクセルコピペ展開)
 let currentTaskTodos = [];
 
-function renderTodoList() {
+function renderTodoList(autoFocusInput = false) {
   const container = document.getElementById('todoListContainer');
   const progressText = document.getElementById('taskProgressValueText');
   if (!container) return;
 
-  if (currentTaskTodos.length === 0) {
-    container.innerHTML = `<div style="font-size: 12px; color: #94a3b8; text-align: center; padding: 24px 10px;">ToDoを追加できます</div>`;
-    if (progressText) progressText.textContent = `進捗 0%`;
-    return;
+  const totalCount = currentTaskTodos.length;
+  const completedCount = currentTaskTodos.filter(t => t.completed).length;
+
+  const countText = document.getElementById('taskTodoCountText');
+  if (countText) {
+    countText.textContent = totalCount > 0 ? `(${completedCount}/${totalCount})` : '';
   }
 
-  const completedCount = currentTaskTodos.filter(t => t.completed).length;
-  const calculatedProgress = Math.round((completedCount / currentTaskTodos.length) * 100);
-  if (progressText) progressText.textContent = `進捗 ${calculatedProgress}% (${completedCount}/${currentTaskTodos.length})`;
-
-  container.innerHTML = currentTaskTodos.map((todo, idx) => `
+  // 1. 既存のToDoアイテム一覧
+  const itemsHtml = currentTaskTodos.map((todo, idx) => `
     <div class="todo-item-row ${todo.completed ? 'completed' : ''}">
       <div class="todo-item-left" onclick="toggleTodoItem(${idx})">
         <input type="checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodoItem(${idx});">
         <span>${escapeHtml(todo.text)}</span>
       </div>
-      <button type="button" class="todo-delete-btn" onclick="deleteTodoItem(${idx})">✕</button>
+      <button type="button" class="todo-delete-btn" onclick="deleteTodoItem(${idx})" title="削除">✕</button>
     </div>
   `).join('');
+
+  // 2. 末尾に常に準備されたインライン入力行
+  const inlineInputHtml = `
+    <div class="todo-inline-add-row" id="todoInlineAddRow">
+      <span class="todo-inline-add-icon">＋</span>
+      <input type="text" id="inlineTodoInput" class="todo-inline-add-input" 
+             placeholder="新しいToDoを入力... (Enterで次へ / エクセルコピペで一括追加)" 
+             autocomplete="off">
+    </div>
+  `;
+
+  container.innerHTML = itemsHtml + inlineInputHtml;
+
+  // 3. インライン入力行のイベント初期化
+  bindInlineTodoInput(autoFocusInput);
+}
+
+function bindInlineTodoInput(autoFocus = false) {
+  const input = document.getElementById('inlineTodoInput');
+  const container = document.getElementById('todoListContainer');
+  if (!input) return;
+
+  if (autoFocus) {
+    input.focus();
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  // ⌨️ Enterキーで連続追加
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = input.value.trim();
+      if (val) {
+        currentTaskTodos.push({
+          id: 'todo_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          text: val,
+          completed: false
+        });
+        renderTodoList(true);
+      }
+    }
+  });
+
+  // 📋 エクセルやスプシからの改行コピペで一括展開！
+  input.addEventListener('paste', (e) => {
+    const pasteText = (e.clipboardData || window.clipboardData)?.getData('text');
+    if (pasteText && pasteText.includes('\n')) {
+      e.preventDefault();
+      const lines = pasteText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length > 0) {
+        lines.forEach((line, i) => {
+          currentTaskTodos.push({
+            id: 'todo_' + (Date.now() + i) + '_' + Math.random().toString(36).substring(2, 6),
+            text: line,
+            completed: false
+          });
+        });
+        renderTodoList(true);
+      }
+    }
+  });
 }
 
 window.toggleTodoItem = function(idx) {
   if (currentTaskTodos[idx]) {
     currentTaskTodos[idx].completed = !currentTaskTodos[idx].completed;
-    renderTodoList();
+    renderTodoList(false);
   }
 };
 
 window.deleteTodoItem = function(idx) {
   currentTaskTodos.splice(idx, 1);
-  renderTodoList();
+  renderTodoList(false);
 };
 
-document.getElementById('addTodoBtn')?.addEventListener('click', () => {
-  const input = document.getElementById('newTodoInput');
-  if (!input) return;
-  const text = input.value.trim();
-  if (!text) return;
+// 📋 他タスクからToDoをコピーする処理
+function initCopyTodoFeature() {
+  const copyBtn = document.getElementById('copyTodoFromTaskBtn');
+  const selectBar = document.getElementById('copyTodoSelectBar');
+  const sourceSelect = document.getElementById('copyTodoSourceSelect');
+  const confirmBtn = document.getElementById('confirmCopyTodoBtn');
+  const cancelBtn = document.getElementById('cancelCopyTodoBtn');
 
-  currentTaskTodos.push({ id: 'todo_' + Date.now(), text: text, completed: false });
-  input.value = '';
-  renderTodoList();
-});
+  if (!copyBtn || !selectBar || !sourceSelect) return;
 
-document.getElementById('newTodoInput')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('addTodoBtn')?.click();
-  }
-});
+  copyBtn.addEventListener('click', () => {
+    const currentTaskId = document.getElementById('taskId')?.value;
+    const tasksWithTodos = currentTasks.filter(t => t.id !== currentTaskId && t.todos && t.todos.length > 0);
+
+    if (tasksWithTodos.length === 0) {
+      alert('コピー元となるToDoを持ったタスクがまだありません。');
+      return;
+    }
+
+    sourceSelect.innerHTML = tasksWithTodos.map(t => {
+      const team = normalizeTeam(t.team);
+      return `<option value="${t.id}">[${team}] ${escapeHtml(t.name)} (${t.todos.length}項目)</option>`;
+    }).join('');
+
+    selectBar.style.display = 'flex';
+  });
+
+  cancelBtn?.addEventListener('click', () => {
+    selectBar.style.display = 'none';
+  });
+
+  confirmBtn?.addEventListener('click', () => {
+    const selectedId = sourceSelect.value;
+    const sourceTask = currentTasks.find(t => t.id === selectedId);
+    if (!sourceTask || !sourceTask.todos) return;
+
+    const cloned = sourceTask.todos.map((item, idx) => ({
+      id: 'todo_' + (Date.now() + idx) + '_' + Math.random().toString(36).substring(2, 6),
+      text: item.text,
+      completed: false // チェックは外して複製
+    }));
+
+    if (currentTaskTodos.length > 0) {
+      const overwrite = confirm(`現在のToDo（${currentTaskTodos.length}件）があります。\n「OK」で上書き、「キャンセル」で末尾に追加しますか？`);
+      if (overwrite) {
+        currentTaskTodos = cloned;
+      } else {
+        currentTaskTodos = [...currentTaskTodos, ...cloned];
+      }
+    } else {
+      currentTaskTodos = cloned;
+    }
+
+    selectBar.style.display = 'none';
+    renderTodoList(false);
+  });
+}
+
+// 初期化時に実行
+initCopyTodoFeature();
 
 // フィルタボタン イベント登録
 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -549,6 +733,8 @@ window.openAddTaskModal = function(options = {}) {
   if (form) form.reset();
 
   document.getElementById('taskId').value = '';
+  const selectBar = document.getElementById('copyTodoSelectBar');
+  if (selectBar) selectBar.style.display = 'none';
   currentTaskTodos = [];
   renderTodoList();
 
@@ -646,6 +832,9 @@ window.openEditModalById = function(id) {
   document.getElementById('taskAssignee').value = task.assignee;
   document.getElementById('taskStartDate').value = task.startDate || '';
   document.getElementById('taskEndDate').value = task.endDate || '';
+
+  const selectBar = document.getElementById('copyTodoSelectBar');
+  if (selectBar) selectBar.style.display = 'none';
 
   currentTaskTodos = task.todos ? JSON.parse(JSON.stringify(task.todos)) : [];
   renderTodoList();

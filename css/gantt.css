@@ -107,6 +107,46 @@
   z-index: 20;
 }
 
+/* 🔘 年間ガントチャート 1日タスク用ドット集約コンテナ＆バッジ */
+.gantt-dots-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 2px 4px;
+  min-height: 24px;
+  position: relative;
+  z-index: 5;
+}
+
+.gantt-dot-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.gantt-dot-badge:hover {
+  transform: scale(1.22);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  z-index: 25;
+}
+
+.gantt-dot-badge:hover .tooltip {
+  opacity: 1;
+}
+
 .badge {
   font-size: 11px;
   padding: 3px 10px;
@@ -181,6 +221,213 @@
   height: 10px;
   border-radius: 3px;
   flex-shrink: 0;
+}
+
+/* 📅 Notion/Linear風 月別スマートタイムライン */
+.timeline-smart-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 4px 60px;
+}
+
+.timeline-month-section {
+  position: relative;
+  margin-bottom: 28px;
+}
+
+.timeline-month-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.timeline-month-pill {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.timeline-items-list {
+  position: relative;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 縦のタイムライン線 */
+.timeline-items-list::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 6px;
+  width: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.timeline-item {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.timeline-item:hover {
+  transform: translateX(4px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* タイムラインのノード（丸いポッチ） */
+.timeline-item-node {
+  position: absolute;
+  left: -19px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #94a3b8;
+  z-index: 2;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.timeline-item:hover .timeline-item-node {
+  transform: translateY(-50%) scale(1.3);
+}
+
+/* チームごとのノードカラー */
+.timeline-item.team-item-運営 .timeline-item-node,
+.timeline-item.team-item-全体 .timeline-item-node { border-color: var(--color-all); background: var(--color-all); }
+.timeline-item.team-item-FRP .timeline-item-node { border-color: var(--color-frp); background: var(--color-frp); }
+.timeline-item.team-item-翼 .timeline-item-node { border-color: var(--color-wing); background: var(--color-wing); }
+.timeline-item.team-item-コクピ .timeline-item-node { border-color: var(--color-cockpit); background: var(--color-cockpit); }
+.timeline-item.team-item-電装 .timeline-item-node { border-color: var(--color-elec); background: var(--color-elec); }
+
+/* 日付エリア */
+.timeline-item-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  min-width: 95px;
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
+/* 本文（タスク名・メモ） */
+.timeline-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timeline-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-item-note {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 右側メタ情報（担当者・ステータス・進捗） */
+.timeline-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.timeline-item-assignee {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.timeline-item-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.timeline-item-status.completed {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.timeline-item-status.in-progress {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.timeline-item-status.not-started {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.timeline-mini-progress {
+  width: 44px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.timeline-mini-progress-fill {
+  height: 100%;
+  background: #0f172a;
+  border-radius: 2px;
+}
+
+/* モバイル対応 */
+@media (max-width: 640px) {
+  .timeline-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .timeline-item-meta {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px dashed #f1f5f9;
+  }
 }
 
 /* 各班詳細モード用 時系列カードボード スタイル */
@@ -344,6 +591,66 @@
 .todo-delete-btn:hover {
   color: #ef4444;
   background: #fef2f2;
+}
+
+/* 📋 他タスクからコピーボタン */
+.btn-copy-todo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-copy-todo:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* ➕ リスト末尾常駐 インラインToDo追加行 */
+.todo-inline-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  margin-top: 4px;
+}
+.todo-inline-add-row:focus-within {
+  background: #ffffff;
+  border-color: #0f172a;
+  border-style: solid;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+}
+.todo-inline-add-icon {
+  font-size: 13px;
+  color: #94a3b8;
+  user-select: none;
+  font-weight: 700;
+}
+.todo-inline-add-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  color: #0f172a;
+  font-family: inherit;
+  padding: 0;
+}
+.todo-inline-add-input::placeholder {
+  color: #94a3b8;
+  font-size: 11px;
 }
 
 /* 🌐 年間 ⇔ 📆 月間 ビュー切り替えトグル */
