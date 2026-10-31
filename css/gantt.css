@@ -574,8 +574,41 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
+  cursor: default;
   flex: 1;
+}
+
+.todo-item-left input[type="checkbox"] {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.todo-item-text {
+  flex: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: text;
+  transition: background 0.15s ease;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.todo-item-text:hover {
+  background: #f1f5f9;
+}
+
+.todo-edit-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 12px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  padding: 3px 6px;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .todo-delete-btn {
@@ -941,6 +974,74 @@
   border-radius: 0;
   margin-left: 0;
   margin-right: 0;
+}
+
+/* 📋 カレンダー内 ToDoアイテム表示 (各班選択時) */
+.month-cal-todo-bar {
+  pointer-events: auto;
+  margin: 1px 2px;
+  padding: 0 6px;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #1e293b;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1;
+  border-left-width: 3.5px !important;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: all 0.12s ease;
+  z-index: 4;
+}
+
+.month-cal-todo-bar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.1);
+  border-color: #94a3b8;
+  z-index: 10;
+}
+
+/* 班別の左アクセントボーダー */
+.month-cal-todo-bar.bg-FRP { border-left-color: var(--color-frp) !important; }
+.month-cal-todo-bar.bg-翼 { border-left-color: var(--color-wing) !important; }
+.month-cal-todo-bar.bg-コクピ { border-left-color: var(--color-cockpit) !important; }
+.month-cal-todo-bar.bg-電装 { border-left-color: var(--color-elec) !important; }
+.month-cal-todo-bar.bg-全体, .month-cal-todo-bar.bg-運営, .month-cal-todo-bar.bg-マイルストーン { border-left-color: var(--color-all) !important; }
+
+/* 完了済みのToDo */
+.month-cal-todo-bar.is-completed {
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+  border-left-color: #94a3b8 !important;
+}
+
+.month-cal-todo-bar.is-completed .cal-todo-title {
+  text-decoration: line-through;
+}
+
+.month-cal-todo-bar .cal-todo-check {
+  font-size: 11px;
+  color: #64748b;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.month-cal-todo-bar.is-completed .cal-todo-check {
+  color: #10b981;
+}
+
+.month-cal-todo-bar .cal-todo-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 🌐 年間ガントチャート空きマスのクリック対応 */

@@ -24,6 +24,72 @@ function normalizeTeam(tName) {
   return tName;
 }
 
+// 📝 ToDoテキストから日付を自動抽出（11/5, 11月5日, 1-1, 1.15 等）
+function parseTodoDate(text, parentTask = null) {
+  if (!text || typeof text !== 'string') return null;
+
+  // 日付パターン: 11/5, 11月5日, 1-1, 1.15 などの月日表記
+  const regex = /(\d{1,2})[/月\.\-](\d{1,2})日?/;
+  const match = text.match(regex);
+  if (!match) return null;
+
+  const m = parseInt(match[1], 10);
+  const d = parseInt(match[2], 10);
+
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+
+  // 年の自動補正 (鳥人間シーズン: 8月〜翌7月)
+  let baseYear = calYear || new Date().getFullYear();
+  if (parentTask && parentTask.startDate) {
+    const pDate = new Date(parentTask.startDate);
+    if (!isNaN(pDate.getTime())) {
+      baseYear = pDate.getFullYear();
+      const pMonth = pDate.getMonth() + 1;
+      if (pMonth <= 7 && m >= 8) baseYear -= 1;
+      if (pMonth >= 8 && m <= 7) baseYear += 1;
+    }
+  } else if (parentTask && parentTask.start) {
+    const pStartMonth = Number(parentTask.start);
+    if (pStartMonth >= 8 && m <= 7) baseYear += 1;
+  } else {
+    if (calMonth >= 8 && m <= 7) baseYear = calYear + 1;
+  }
+
+  const ymd = `${baseYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  // タイトルから日付表記と前後の余白を除去してスッキリ表示（「テスト」の「テ」が巻き込まれないよう修正）
+  const cleanTitle = text.replace(/(?:^|\s*)(\d{1,2})[/月\.\-](\d{1,2})日?(?:\s*|$)/, '').trim();
+
+  return {
+    date: ymd,
+    month: m,
+    day: d,
+    year: baseYear,
+    title: cleanTitle || text,
+    originalText: text
+  };
+}
+
+// 📋 カレンダーから直接ToDoの完了/未完了をワンクリック切り替え
+window.toggleTodoCalendarItem = function(taskId, todoId) {
+  const task = currentTasks.find(t => t.id === taskId);
+  if (!task || !task.todos) return;
+
+  const todo = task.todos.find(td => td.id === todoId);
+  if (!todo) return;
+
+  todo.completed = !todo.completed;
+
+  // 進捗率を再計算
+  const total = task.todos.length;
+  const completed = task.todos.filter(t => t.completed).length;
+  task.progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  if (typeof saveTasks === 'function') {
+    saveTasks(currentTasks);
+  }
+  render();
+};
+
 // 描画エントリポイント
 function render() {
   if (typeof renderHomeDashboard === 'function') {
@@ -350,6 +416,27 @@ function renderMonthlyCalendar(filteredTasks) {
   // カレンダー対象タスク (具体的な日付があるもの)
   const validTasks = filteredTasks.filter(task => Boolean(task.startDate || task.endDate));
 
+  // 📋 各班選択時のみ、該当班のタスク内ToDoから日付指定のあるものを自動抽出
+  const todoItems = [];
+  if (currentTeamFilter !== 'all') {
+    filteredTasks.forEach(task => {
+      if (task.todos && Array.isArray(task.todos)) {
+        task.todos.forEach(todo => {
+          const parsed = parseTodoDate(todo.text, task);
+          if (parsed) {
+            todoItems.push({
+              task,
+              todo,
+              date: parsed.date,
+              title: parsed.title,
+              isTodo: true
+            });
+          }
+        });
+      }
+    });
+  }
+
   let weeksHtml = '';
 
   weeks.forEach(week => {
@@ -382,7 +469,29 @@ function renderMonthlyCalendar(filteredTasks) {
             colSpan,
             colEnd: colStart + colSpan - 1,
             isStart,
-            isEnd
+            isEnd,
+            isTodo: false
+          });
+        }
+      }
+    });
+
+    // 📋 この週に属するToDo予定を抽出（各班選択時のみ）
+    todoItems.forEach(item => {
+      if (item.date >= weekStart && item.date <= weekEnd) {
+        const idx = week.findIndex(d => d.ymd === item.date);
+        if (idx >= 0) {
+          const colStart = idx + 1;
+          weekTasks.push({
+            task: item.task,
+            todo: item.todo,
+            title: item.title,
+            isTodo: true,
+            colStart: colStart,
+            colSpan: 1,
+            colEnd: colStart,
+            isStart: true,
+            isEnd: true
           });
         }
       }
@@ -434,6 +543,22 @@ function renderMonthlyCalendar(filteredTasks) {
     const eventRowsCount = Math.max(lanes.length, 1);
     const eventsHtml = weekTasks.map(item => {
       const teamClass = `bg-${normalizeTeam(item.task.team)}`;
+
+      // 📋 各班選択時のToDoアイテム表示
+      if (item.isTodo) {
+        const isDone = Boolean(item.todo.completed);
+        return `
+          <div class="month-cal-todo-bar ${teamClass} ${isDone ? 'is-completed' : ''}"
+               style="grid-column: ${item.colStart} / span 1; grid-row: ${item.row};"
+               onclick="event.stopPropagation(); window.toggleTodoCalendarItem('${item.task.id}', '${item.todo.id}')"
+               title="${escapeHtml(item.task.name)}: ${escapeHtml(item.title)} (${isDone ? '完了' : '未完了'} - クリックで切替)">
+            <span class="cal-todo-check">${isDone ? '☑' : '☐'}</span>
+            <span class="cal-todo-title">${escapeHtml(item.title)}</span>
+          </div>
+        `;
+      }
+
+      // 通常タスクバー
       const startCap = item.isStart ? 'is-start' : '';
       const endCap = item.isEnd ? 'is-end' : '';
       const isPeriod = Boolean(item.task.startDate && item.task.endDate && item.task.startDate !== item.task.endDate);
@@ -511,9 +636,9 @@ function renderTodoList(autoFocusInput = false) {
   // 1. 既存のToDoアイテム一覧
   const itemsHtml = currentTaskTodos.map((todo, idx) => `
     <div class="todo-item-row ${todo.completed ? 'completed' : ''}">
-      <div class="todo-item-left" onclick="toggleTodoItem(${idx})">
-        <input type="checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodoItem(${idx});">
-        <span>${escapeHtml(todo.text)}</span>
+      <div class="todo-item-left">
+        <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodoItem(${idx});" title="完了切り替え">
+        <span class="todo-item-text" id="todoText_${idx}" onclick="startEditingTodo(${idx}, event)" title="クリックして編集">${escapeHtml(todo.text)}</span>
       </div>
       <button type="button" class="todo-delete-btn" onclick="deleteTodoItem(${idx})" title="削除">✕</button>
     </div>
@@ -582,6 +707,49 @@ function bindInlineTodoInput(autoFocus = false) {
     }
   });
 }
+
+// ✏️ ToDoテキストの直接インライン編集 (Notion風: クリックでinput化、Enter/blurで確定)
+window.startEditingTodo = function(idx, event) {
+  if (event) event.stopPropagation();
+  const textSpan = document.getElementById(`todoText_${idx}`);
+  if (!textSpan || !currentTaskTodos[idx]) return;
+
+  const currentText = currentTaskTodos[idx].text;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'todo-edit-input';
+  input.value = currentText;
+
+  let isCommitted = false;
+  const commit = (newVal) => {
+    if (isCommitted) return;
+    isCommitted = true;
+    const trimmed = newVal.trim();
+    if (trimmed && trimmed !== currentText) {
+      currentTaskTodos[idx].text = trimmed;
+    }
+    renderTodoList(false);
+  };
+
+  input.addEventListener('blur', () => {
+    commit(input.value);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commit(input.value);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      isCommitted = true;
+      renderTodoList(false);
+    }
+  });
+
+  textSpan.replaceWith(input);
+  input.focus();
+  input.select();
+};
 
 window.toggleTodoItem = function(idx) {
   if (currentTaskTodos[idx]) {
