@@ -562,7 +562,7 @@ function renderMonthlyCalendar(filteredTasks) {
       const startCap = item.isStart ? 'is-start' : '';
       const endCap = item.isEnd ? 'is-end' : '';
       const isPeriod = Boolean(item.task.startDate && item.task.endDate && item.task.startDate !== item.task.endDate);
-      const icon = (item.isStart && isPeriod) ? '📅 ' : '';
+      const icon = '';
       return `
         <div class="month-cal-event-bar ${teamClass} ${startCap} ${endCap}"
              style="grid-column: ${item.colStart} / span ${item.colSpan}; grid-row: ${item.row};"
@@ -1110,7 +1110,7 @@ document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
   render();
 });
 
-document.getElementById('todayMonthBtn')?.addEventListener('click', () => {
+document.getElementById('currentMonthLabel')?.addEventListener('click', () => {
   const d = new Date();
   calYear = d.getFullYear();
   calMonth = d.getMonth() + 1;

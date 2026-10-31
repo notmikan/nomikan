@@ -77,39 +77,33 @@
 
     <!-- スケジュール（旧タイムテーブル）タブビュー -->
     <section id="timetableTab" class="tab-content active">
-      <div class="sub-toolbar">
-        <div class="toolbar-left">
-          <div class="filter-group">
-            <button class="filter-btn active" data-team="all">全体</button>
-            <button class="filter-btn" data-team="運営">運営</button>
-            <button class="filter-btn" data-team="FRP">FRP</button>
-            <button class="filter-btn" data-team="翼">翼</button>
-            <button class="filter-btn" data-team="コクピ">コクピ</button>
-            <button class="filter-btn" data-team="電装">電装</button>
-          </div>
+      <!-- 1段目: [< 2026年 11月 >] ＋ [月間/年間] ＋ [＋追加] -->
+      <div class="schedule-top-bar">
+        <div class="month-nav-controls" id="monthNavToolbar">
+          <button type="button" class="month-nav-btn" id="prevMonthBtn" title="前月">◀</button>
+          <span class="month-nav-label" id="currentMonthLabel" title="クリックで今月に戻る" style="cursor: pointer;">2026年 11月</span>
+          <button type="button" class="month-nav-btn" id="nextMonthBtn" title="次月">▶</button>
+        </div>
 
+        <div class="schedule-actions">
           <!-- 年間 ⇔ 月間 ビュー切り替えトグル -->
           <div class="view-toggle-group">
             <button type="button" class="view-toggle-btn active" id="viewToggleMonth">月間</button>
             <button type="button" class="view-toggle-btn" id="viewToggleYear">年間</button>
           </div>
-        </div>
-
-        <div class="toolbar-right">
-          <input type="text" id="searchInput" class="search-input" placeholder="検索...">
-          <button class="btn btn-primary" id="addBtn">
-            ＋ タスク追加
-          </button>
+          <button class="btn btn-primary btn-add-compact" id="addBtn">＋追加</button>
         </div>
       </div>
 
-      <!-- 📆 月間カレンダー専用 月移動ツールバー (月間モード時のみ表示) -->
-      <div id="monthNavToolbar" class="month-nav-toolbar" style="display: flex;">
-        <div class="month-nav-controls">
-          <button type="button" class="month-nav-btn" id="prevMonthBtn" title="前月">◀</button>
-          <span class="month-nav-label" id="currentMonthLabel">2026年 11月</span>
-          <button type="button" class="month-nav-btn" id="nextMonthBtn" title="次月">▶</button>
-          <button type="button" class="month-today-btn" id="todayMonthBtn">今月</button>
+      <!-- 2段目: 班フィルター [全体] [運営] [FRP] [翼] [コクピ] [電装] -->
+      <div class="schedule-filter-bar">
+        <div class="filter-group">
+          <button class="filter-btn active" data-team="all">全体</button>
+          <button class="filter-btn" data-team="運営">運営</button>
+          <button class="filter-btn" data-team="FRP">FRP</button>
+          <button class="filter-btn" data-team="翼">翼</button>
+          <button class="filter-btn" data-team="コクピ">コクピ</button>
+          <button class="filter-btn" data-team="電装">電装</button>
         </div>
       </div>
 
@@ -117,21 +111,6 @@
       <div class="container">
         <div id="ganttGrid">
           <!-- JSで描画 -->
-        </div>
-
-        <!-- フッター凡例 -->
-        <div class="footer-bar">
-          <div class="legend-dots">
-            <div class="legend-item"><span class="dot dot-frp"></span> FRP</div>
-            <div class="legend-item"><span class="dot dot-wing"></span> 翼</div>
-            <div class="legend-item"><span class="dot dot-cockpit"></span> コクピ</div>
-            <div class="legend-item"><span class="dot dot-elec"></span> 電装</div>
-            <div class="legend-item"><span class="dot dot-all"></span> 運営</div>
-            <div class="legend-item"><span class="dot dot-milestone"></span> マイルストーン</div>
-          </div>
-          <div class="grid-stats" id="gridStats">
-            タスク数: 0
-          </div>
         </div>
       </div>
     </section>
