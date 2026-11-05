@@ -59,10 +59,13 @@ function initMembersDatabase() {
   }
 
   // Firebase Realtime DB 同期
-  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.database) {
     if (firebase.auth && !firebase.auth().currentUser) return;
     try {
-      firebaseDbMembersRef = firebase.database().ref(FIREBASE_MEMBERS_KEY);
+      if (!firebaseDbMembersRef) {
+        firebaseDbMembersRef = firebase.database().ref(FIREBASE_MEMBERS_KEY);
+      }
+      firebaseDbMembersRef.off();
       firebaseDbMembersRef.on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -81,11 +84,24 @@ function initMembersDatabase() {
           firebaseDbMembersRef.set(currentMembersList);
         }
 
-        // 端末側のユーザー情報と同期（学年などがDB側で更新されていればローカル反映）
+        // 🌟 自己自動登録フェイルセーフ: ログイン中ユーザーがDBに無ければ自動で追加して保存
         const myName = localStorage.getItem('hope_user_author');
-        if (myName) {
-          const matched = currentMembersList.find(m => m.name === myName);
-          if (matched && matched.grade) {
+        const myTeam = localStorage.getItem('hope_user_team') || '運営';
+        if (myName && myName.trim()) {
+          const cleanMyName = myName.trim();
+          const matched = currentMembersList.find(m => m.name === cleanMyName);
+          if (!matched) {
+            const myMember = {
+              id: 'm_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+              name: cleanMyName,
+              realName: '',
+              grade: localStorage.getItem('hope_user_grade') || '',
+              team: myTeam
+            };
+            currentMembersList.push(myMember);
+            localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(currentMembersList));
+            firebaseDbMembersRef.set(currentMembersList);
+          } else if (matched.grade) {
             localStorage.setItem('hope_user_grade', matched.grade);
           }
         }
@@ -140,6 +156,15 @@ window.registerOrSyncMember = function(name, team = '運営') {
 function saveMembersToDb(newMembers) {
   currentMembersList = newMembers.map(sanitizeMember).filter(Boolean);
   localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(currentMembersList));
+
+  if (!firebaseDbMembersRef && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.database) {
+    try {
+      firebaseDbMembersRef = firebase.database().ref(FIREBASE_MEMBERS_KEY);
+    } catch (e) {
+      console.warn("Could not get firebaseDbMembersRef:", e);
+    }
+  }
+
   if (firebaseDbMembersRef) {
     firebaseDbMembersRef.set(currentMembersList).catch(err => console.error("Save members error:", err));
   }

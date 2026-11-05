@@ -468,8 +468,9 @@ function setupSnsEventListeners() {
         // Firebase 匿名認証実行
         if (typeof firebase !== 'undefined' && firebase.auth) {
           firebase.auth().signInAnonymously().then(() => {
-            saveUserProfileData(author);
             if (typeof startFirebaseSync === 'function') startFirebaseSync();
+            if (typeof initMembersDatabase === 'function') initMembersDatabase();
+            saveUserProfileData(author);
             if (typeof updateAdminUI === 'function') updateAdminUI();
             if (typeof updateEventModeUI === 'function') updateEventModeUI();
             closeUserProfileModal();
@@ -493,6 +494,7 @@ function setupSnsEventListeners() {
 
       // 既に認証済みの場合
       saveUserProfileData(author);
+      if (typeof initMembersDatabase === 'function') initMembersDatabase();
       if (typeof updateAdminUI === 'function') updateAdminUI();
       if (typeof updateEventModeUI === 'function') updateEventModeUI();
       closeUserProfileModal();
