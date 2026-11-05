@@ -1,10 +1,17 @@
 /**
- * db.js - Firebase Realtime DB & LocalStorage 同期モジュール
+ * db.js - Firebase Realtime DB & LocalStorage 同期モジュール (ユーザー登録＋部内合言葉統合版)
  */
+
+const GENERAL_PASSCODE = 'HoPE1968';
+const LEGACY_PASSCODE = 'HoPE_1968';
+const ADMIN_PASSCODE = 'HoPE1127';
+const PASSCODE_STORAGE_KEY = 'hope_app_passcode';
 
 let currentTasks = [...defaultTasks];
 let firebaseDbRef = null;
 let isFirebaseOnline = false;
+let isDatabaseInitialized = false;
+let isAuthListenerAttached = false;
 
 // 通信ステータスバッジの表示切り替え
 function setOnlineStatus(online) {
@@ -26,8 +33,82 @@ function setOnlineStatus(online) {
   }
 }
 
+// 🔐 モーダル制御（ユーザー登録＋部内認証統合）
+function openPasscodeModal() {
+  if (typeof openUserProfileModal === 'function') {
+    openUserProfileModal(true);
+  }
+}
+
+function closePasscodeModal() {
+  if (typeof closeUserProfileModal === 'function') {
+    closeUserProfileModal();
+  }
+}
+
+// 🚪 部内認証解除（ログアウト）
+window.logoutAppAuth = function () {
+  if (confirm('部内認証を解除（ログアウト）しますか？')) {
+    localStorage.removeItem(PASSCODE_STORAGE_KEY);
+    localStorage.removeItem('hope_is_admin');
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().signOut().finally(() => {
+        location.reload();
+      });
+    } else {
+      location.reload();
+    }
+  }
+};
+
+// リアルタイムクラウド同期の開始
+function startFirebaseSync() {
+  if (typeof firebase === 'undefined' || !firebase.database) {
+    fallbackToLocal();
+    return;
+  }
+
+  try {
+    firebaseDbRef = firebase.database().ref('hope_webapp_tasks');
+    
+    // リアルタイムリスナー設定
+    firebaseDbRef.on('value', (snapshot) => {
+      const val = snapshot.val();
+      if (val && Array.isArray(val) && val.length > 0) {
+        currentTasks = val;
+      } else if (val && typeof val === 'object' && Object.keys(val).length > 0) {
+        currentTasks = Object.values(val);
+      } else {
+        currentTasks = [...defaultTasks];
+        saveTasksToDb(currentTasks);
+      }
+      setOnlineStatus(true);
+      if (typeof render === 'function') render();
+    }, (error) => {
+      console.warn("Firebase sync error:", error);
+      fallbackToLocal();
+    });
+
+    // SNS (チャット) 同期開始
+    if (typeof initPostsDatabase === 'function') initPostsDatabase();
+
+    // 在庫同期開始
+    if (typeof initInventoryFirebase === 'function') initInventoryFirebase();
+
+    // 👥 名簿DB同期開始
+    if (typeof initMembersDatabase === 'function') initMembersDatabase();
+
+  } catch (e) {
+    console.error("Firebase sync start error:", e);
+    fallbackToLocal();
+  }
+}
+
 // データベースの初期化
 function initDatabase() {
+  if (isDatabaseInitialized) return;
+  isDatabaseInitialized = true;
+
   let savedConfigStr = localStorage.getItem('hope_firebase_config');
   let config = null;
   
@@ -61,28 +142,41 @@ function initDatabase() {
       if (!firebase.apps.length) {
         firebase.initializeApp(config);
       }
-      firebaseDbRef = firebase.database().ref('hope_webapp_tasks');
-      
-      // リアルタイムリスナー設定
-      firebaseDbRef.on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (val && Array.isArray(val) && val.length > 0) {
-          currentTasks = val;
-        } else if (val && typeof val === 'object' && Object.keys(val).length > 0) {
-          currentTasks = Object.values(val);
-        } else {
-          currentTasks = [...defaultTasks];
-          saveTasksToDb(currentTasks);
-        }
-        setOnlineStatus(true);
-        if (typeof render === 'function') render();
-      }, (error) => {
-        console.warn("Firebase sync error:", error);
-        fallbackToLocal();
-      });
 
-      if (typeof initPostsDatabase === 'function') initPostsDatabase();
-      return;
+      // Firebase Auth 状態監視 (ユーザー登録＆合言葉連動)
+      if (firebase.auth && !isAuthListenerAttached) {
+        isAuthListenerAttached = true;
+        firebase.auth().onAuthStateChanged((user) => {
+          const savedPass = localStorage.getItem(PASSCODE_STORAGE_KEY);
+          const isPassSaved = savedPass === GENERAL_PASSCODE || savedPass === LEGACY_PASSCODE || savedPass === ADMIN_PASSCODE;
+          const isUserSaved = !!localStorage.getItem('hope_user_author');
+
+          if (savedPass === ADMIN_PASSCODE) {
+            localStorage.setItem('hope_is_admin', 'true');
+          }
+
+          if (user && isPassSaved && isUserSaved) {
+            // 認証済み＆プロフィール登録済み
+            closePasscodeModal();
+            startFirebaseSync();
+          } else {
+            if (isPassSaved && isUserSaved) {
+              // 端末に合言葉あり：自動サイレントサインイン
+              firebase.auth().signInAnonymously().then(() => {
+                closePasscodeModal();
+                startFirebaseSync();
+              }).catch((err) => {
+                console.error("Auto sign-in error:", err);
+                openPasscodeModal();
+              });
+            } else {
+              // 未認証または未登録：部内登録モーダルを表示
+              openPasscodeModal();
+            }
+          }
+        });
+        return;
+      }
     } catch (e) {
       console.error("Firebase init error:", e);
     }
@@ -134,7 +228,7 @@ function saveTasksToDb(tasksToSave) {
 }
 
 // タスク削除関数
-window.deleteTaskById = function(id) {
+window.deleteTaskById = function (id) {
   if (confirm('このタスクを削除してもよろしいですか？')) {
     const newTasks = currentTasks.filter(t => t.id !== id);
     saveTasks(newTasks);
@@ -150,7 +244,7 @@ const cancelDbBtn = document.getElementById('cancelDbBtn');
 const dbStatusBadge = document.getElementById('dbStatusBadge');
 
 // 🛠️ デバッグ用グローバル関数 (コンソール `openDbConfigModal()` で起動可能)
-window.openDbConfigModal = function() {
+window.openDbConfigModal = function () {
   if (dbConfigModal) dbConfigModal.classList.add('active');
 };
 

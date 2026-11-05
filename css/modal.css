@@ -174,3 +174,249 @@
 }
 
 .action-btn:hover { background: #f1f5f9; color: #0f172a; }
+
+/* 🔐 部内専用パスコード認証モーダル専用スタイル (紫禁止・洗練モダンUI) */
+.modal-overlay.passcode-overlay {
+  z-index: 99999999 !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.passcode-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+.passcode-icon-badge {
+  width: 52px;
+  height: 52px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+
+.passcode-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.passcode-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+}
+
+.passcode-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passcode-input {
+  letter-spacing: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  padding-right: 38px;
+}
+
+.btn-toggle-password {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  opacity: 0.6;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.btn-toggle-password:hover {
+  opacity: 1;
+}
+
+.passcode-error-msg {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 6px;
+  min-height: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.passcode-submit-btn {
+  width: 100%;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border: none;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.passcode-submit-btn:hover {
+  opacity: 0.9;
+}
+
+.passcode-submit-btn:active {
+  transform: scale(0.98);
+}
+
+.passcode-footer-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 18px;
+  line-height: 1.4;
+}
+
+/* 👥 タスク参加メンバー管理UI専用スタイル (紫禁止・モダンクリーン) */
+.task-members-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 8px;
+  align-items: center;
+}
+
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.member-chip-remove {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.member-chip-remove:hover {
+  color: #ef4444;
+}
+
+.task-available-members-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 110px;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
+.avail-member-chip {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.avail-member-chip:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.task-member-team-tabs .tab-chip {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.task-member-team-tabs .tab-chip.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.btn-join-event {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+
+.btn-join-event:hover {
+  opacity: 0.9;
+}
+
+.btn-leave-event {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.btn-leave-event:hover {
+  background: #fecaca;
+}

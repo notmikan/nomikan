@@ -25,6 +25,7 @@
 
   <!-- Firebase JS SDK (v10 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
@@ -156,8 +157,11 @@
   <div class="modal-overlay" id="taskModal">
     <div class="modal modal-wide">
       <div class="modal-header">
-        <div class="modal-title" id="modalTitle">タスク詳細</div>
-        <button class="action-btn" id="closeModal">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="modal-title" id="modalTitle">タスク詳細</div>
+          <span id="taskAutoSaveBadge" style="font-size: 11px; font-weight: 600; color: #10b981; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 9999px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">✔ 自動保存済み</span>
+        </div>
+        <button type="button" class="action-btn" id="closeModal">✕</button>
       </div>
       <form id="taskForm">
         <input type="hidden" id="taskId">
@@ -247,6 +251,57 @@
               <textarea id="taskNote" class="form-control" placeholder="注意事項や資材メモなど..." rows="3"
                 style="font-size: 13px; line-height: 1.5; resize: vertical;"></textarea>
             </div>
+
+            <!-- 👑 幹部専用: 参加者を募集するイベント切替チェック -->
+            <div id="taskEventModeToggleWrap" style="margin-top: 10px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: none;">
+              <label class="checkbox-label" style="font-size: 12px; font-weight: 700; color: #0f172a; cursor: pointer; margin-bottom: 0;">
+                <input type="checkbox" id="taskIsEventCheckbox" style="accent-color: #0f172a; cursor: pointer;"> 👥 参加者を募集する（イベント）
+              </label>
+            </div>
+
+            <!-- 👥 参加メンバー管理セクション (isEventが有効な場合のみ表示) -->
+            <div class="form-group" style="margin-top: 12px; display: none;" id="taskMembersSection">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="margin-bottom: 0; font-weight: 700; color: #0f172a; font-size: 13px;">
+                  参加者 <span id="taskMemberCountBadge" style="font-size: 11px; font-weight: 600; color: #64748b;">(0名)</span>
+                </label>
+                <button type="button" id="copyTaskMemberListBtn" class="btn-copy-todo" style="font-size: 11px; padding: 2px 8px;" title="名簿テキストをコピー">
+                  📋 名簿コピー
+                </button>
+              </div>
+
+              <!-- 参加メンバー表示バッジ枠 -->
+              <div id="taskSelectedMembersWrap" class="task-members-chips-wrap">
+                <!-- JSで選択済み部員チップを描画 -->
+              </div>
+
+              <!-- 【一般部員用】 ワンタップ参加ボタン -->
+              <div id="taskSelfJoinBar" style="margin-top: 8px; display: none;">
+                <button type="button" id="toggleSelfJoinBtn" class="btn-join-event">
+                  <span>参加する</span>
+                </button>
+              </div>
+
+              <!-- 【幹部専用】 メンバー追加エリア -->
+              <div id="taskAdminAddMemberArea" style="margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #475569;">参加者を追加</span>
+                  <!-- 班絞り込みタブ -->
+                  <div class="task-member-team-tabs" id="taskMemberTeamTabs">
+                    <button type="button" class="tab-chip active" data-mteam="all">全員</button>
+                    <button type="button" class="tab-chip" data-mteam="運営">運営</button>
+                    <button type="button" class="tab-chip" data-mteam="FRP">FRP</button>
+                    <button type="button" class="tab-chip" data-mteam="翼">翼</button>
+                    <button type="button" class="tab-chip" data-mteam="コクピ">コクピ</button>
+                    <button type="button" class="tab-chip" data-mteam="電装">電装</button>
+                  </div>
+                </div>
+                <!-- 追加候補メンバーチップ一覧 -->
+                <div id="taskAvailableMembersList" class="task-available-members-wrap">
+                  <!-- JSで候補部員を描画 -->
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 【右カラム】 ToDoリスト (白背景・シームレス) -->
@@ -314,11 +369,11 @@
     </div>
   </div>
 
-  <!-- メンバープロフィール設定モーダル -->
+  <!-- メンバープロフィール設定モーダル (部内合言葉認証統合) -->
   <div class="modal-overlay" id="userProfileModal">
     <div class="modal">
       <div class="modal-header">
-        <div class="modal-title">プロフィール設定</div>
+        <div class="modal-title" id="userProfileModalTitle">HoPE</div>
         <button class="action-btn" id="closeProfileModal" style="display:none;">✕</button>
       </div>
       <form id="userProfileForm" style="margin-top: 16px;">
@@ -326,16 +381,16 @@
           <div class="x-avatar" id="profileAvatarPreview"
             style="width: 56px; height: 56px; font-size: 20px; flex-shrink:0;">👤</div>
           <div>
-            <label for="modalAvatarInput" class="btn btn-secondary btn-sm" style="cursor: pointer;">📷 アイコン画像を変更</label>
+            <label for="modalAvatarInput" class="btn btn-secondary btn-sm" style="cursor: pointer;">📷 アイコン変更</label>
             <input type="file" id="modalAvatarInput" accept="image/*" style="display: none;">
           </div>
         </div>
         <div class="form-group">
-          <label>表示名</label>
-          <input type="text" id="modalAuthorInput" class="form-control" placeholder="例: 山田" required>
+          <label>名前</label>
+          <input type="text" id="modalAuthorInput" class="form-control" placeholder="名前" required>
         </div>
         <div class="form-group">
-          <label>メイン所属班</label>
+          <label>所属班</label>
           <select id="modalTeamSelect" class="form-control">
             <option value="FRP">FRP班</option>
             <option value="翼">翼班</option>
@@ -344,10 +399,71 @@
             <option value="運営">運営</option>
           </select>
         </div>
-        <div class="modal-actions">
-          <button type="submit" class="btn btn-primary" style="width:100%;">保存</button>
+        <!-- 🔐 あいことば入力欄 (未認証時のみ表示) -->
+        <div class="form-group" id="modalPasscodeGroup">
+          <label>あいことば</label>
+          <div class="passcode-input-wrap">
+            <input type="password" id="modalPasscodeInput" class="form-control" placeholder="あいことば" autocomplete="current-password">
+            <button type="button" class="btn-toggle-password" id="toggleModalPasswordVisibility" title="表示切替">👁️</button>
+          </div>
+          <div class="passcode-error-msg" id="modalPasscodeErrorMsg"></div>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 18px;">
+          <button type="submit" class="btn btn-primary" id="profileSubmitBtn" style="width:100%;">入室</button>
+        </div>
+
+        <!-- 幹部用メニュー (幹部入室時かつプロフィール編集時のみ表示) -->
+        <div id="modalAdminArea" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: none;">
+          <button type="button" class="btn btn-secondary btn-sm" id="openMemberLinkModalBtn" style="width: 100%; font-size: 12px;">
+            👥 部員名簿管理
+          </button>
+        </div>
+
+        <!-- 認証解除（設定変更時のみ表示） -->
+        <div id="modalLogoutWrap" style="margin-top: 18px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center; display: none;">
+          <button type="button" class="btn-link-sm" onclick="logoutAppAuth()" style="color: #ef4444; font-size: 12px; font-weight: 500; cursor: pointer; background: none; border: none;">
+            🚪 部内認証を解除（ログアウト）
+          </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- 👥 部員名簿管理モーダル (幹部専用) -->
+  <div class="modal-overlay" id="memberLinkModal">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title">👥 部員名簿管理</div>
+        <button class="action-btn" id="closeMemberLinkModalBtn">✕</button>
+      </div>
+      <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0; line-height: 1.4;">
+        部員が入室すると自動で名簿に追加されます。学年や所属班をここで直接編集できます。
+      </p>
+
+      <!-- 幹部による手動追加フォーム -->
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;">
+        <input type="text" id="adminNewMemberName" placeholder="名前" style="flex: 2; padding: 4px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <input type="text" id="adminNewMemberGrade" placeholder="学年 (例: 2年)" style="flex: 1; padding: 4px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <select id="adminNewMemberTeam" style="flex: 1; padding: 4px 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+          <option value="運営">運営</option>
+          <option value="FRP">FRP</option>
+          <option value="翼">翼</option>
+          <option value="コクピ">コクピ</option>
+          <option value="電装">電装</option>
+        </select>
+        <button type="button" id="adminAddMemberSubmitBtn" class="btn btn-primary btn-sm" style="font-size: 11px; padding: 5px 10px; white-space: nowrap;">
+          追加
+        </button>
+      </div>
+
+      <div id="memberLinkTableContainer" style="max-height: 340px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <!-- JSで部員一覧テーブルを描画 -->
+      </div>
+
+      <div class="modal-actions" style="margin-top: 14px;">
+        <button type="button" class="btn" id="closeMemberLinkModalBottomBtn" style="width: 100%;">閉じる</button>
+      </div>
     </div>
   </div>
 
@@ -543,14 +659,15 @@
     </div>
   </div>
 
-  <!-- モジュールJavaScriptの読み込み -->
-  <script src="js/config.js"></script>
-  <script src="js/db.js"></script>
-  <script src="js/home.js"></script>
-  <script src="js/timetable.js"></script>
-  <script src="js/sns.js"></script>
-  <script src="js/inventory.js"></script>
-  <script src="js/main.js"></script>
+  <!-- モジュールJavaScriptの読み込み (キャッシュバスター付与) -->
+  <script src="js/config.js?v=2003"></script>
+  <script src="js/db.js?v=2003"></script>
+  <script src="js/members.js?v=2003"></script>
+  <script src="js/home.js?v=2003"></script>
+  <script src="js/timetable.js?v=2003"></script>
+  <script src="js/sns.js?v=2003"></script>
+  <script src="js/inventory.js?v=2003"></script>
+  <script src="js/main.js?v=2003"></script>
 </body>
 
 </html>

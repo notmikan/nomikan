@@ -43,6 +43,11 @@ function initPostsUser() {
     currentUser.author = savedAuthor;
     currentUser.avatar = savedAvatar || '';
     updateUserProfileUI();
+
+    // 既存部員の同期
+    if (typeof registerOrSyncMember === 'function') {
+      registerOrSyncMember(currentUser.author, currentUser.team, currentUser.avatar);
+    }
   } else {
     setTimeout(() => {
       openUserProfileModal(true);
@@ -68,6 +73,29 @@ function updateUserProfileUI() {
   }
 }
 
+// ユーザープロフィール保存処理
+function saveUserProfileData(author) {
+  currentUser.author = author;
+  currentUser.avatar = pendingAvatarImage || '';
+  const modalTeamSelect = document.getElementById('modalTeamSelect');
+  if (modalTeamSelect) {
+    currentUser.team = modalTeamSelect.value;
+    localStorage.setItem('hope_user_team', currentUser.team);
+  }
+  localStorage.setItem('hope_user_author', author);
+  localStorage.setItem('hope_user_avatar', currentUser.avatar);
+
+  // 👥 名前キーによるDB自動登録 ＆ マルチデバイス同期
+  if (typeof registerOrSyncMember === 'function') {
+    const synced = registerOrSyncMember(author, currentUser.team, currentUser.avatar);
+    if (synced && synced.grade) {
+      localStorage.setItem('hope_user_grade', synced.grade);
+    }
+  }
+
+  updateUserProfileUI();
+}
+
 // アバター要素HTMLの共通レンダリング関数
 function renderAvatarHtml(author, avatarUrl, extraClass = '', teamTag = '雑談') {
   if (avatarUrl) {
@@ -76,14 +104,23 @@ function renderAvatarHtml(author, avatarUrl, extraClass = '', teamTag = '雑談'
   return `<div class="x-avatar ${extraClass} x-avatar-${teamTag}">${getAvatarInitial(author)}</div>`;
 }
 
-// メンバー登録モーダルの開閉制御
+// メンバー登録モーダルの開閉制御 (部内合言葉認証統合)
 function openUserProfileModal(isFirstTime = false) {
   const modal = document.getElementById('userProfileModal');
   const closeBtn = document.getElementById('closeProfileModal');
   const modalAuthorInput = document.getElementById('modalAuthorInput');
   const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+  const titleEl = document.getElementById('userProfileModalTitle');
+  const passcodeGroup = document.getElementById('modalPasscodeGroup');
+  const passcodeInput = document.getElementById('modalPasscodeInput');
+  const passcodeError = document.getElementById('modalPasscodeErrorMsg');
+  const submitBtn = document.getElementById('profileSubmitBtn');
+  const logoutWrap = document.getElementById('modalLogoutWrap');
 
   if (!modal) return;
+
+  const savedP = localStorage.getItem('hope_app_passcode');
+  const isAuthSaved = savedP === 'HoPE1968' || savedP === 'HoPE_1968' || savedP === 'HoPE1127';
 
   if (modalAuthorInput) modalAuthorInput.value = currentUser.author || '';
   const modalTeamSelect = document.getElementById('modalTeamSelect');
@@ -100,11 +137,52 @@ function openUserProfileModal(isFirstTime = false) {
     }
   }
 
-  if (closeBtn) {
-    closeBtn.style.display = isFirstTime ? 'none' : 'block';
+  if (passcodeError) passcodeError.textContent = '';
+
+  if (!isAuthSaved || isFirstTime || !currentUser.author) {
+    // 初回登録・未認証時：あいことば入力欄を表示
+    if (titleEl) titleEl.textContent = 'HoPE';
+    if (passcodeGroup) passcodeGroup.style.display = 'block';
+    if (passcodeInput) {
+      passcodeInput.required = true;
+      passcodeInput.value = '';
+      passcodeInput.placeholder = 'あいことば';
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '入室';
+    }
+    if (closeBtn) closeBtn.style.display = 'none';
+    if (logoutWrap) logoutWrap.style.display = 'none';
+  } else {
+    // 認証済み・設定編集時：合言葉入力欄を隠す
+    if (titleEl) titleEl.textContent = 'プロフィール設定';
+    if (passcodeGroup) {
+      passcodeGroup.style.display = 'none';
+      if (passcodeInput) passcodeInput.required = false;
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '保存';
+    }
+    if (closeBtn) closeBtn.style.display = 'block';
+    if (logoutWrap) logoutWrap.style.display = 'block';
   }
+
   modal.classList.add('active');
+  modal.style.display = 'flex';
 }
+
+window.openUserProfileModal = openUserProfileModal;
+
+function closeUserProfileModal() {
+  const modal = document.getElementById('userProfileModal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+}
+window.closeUserProfileModal = closeUserProfileModal;
 
 // X (Twitter) 風 投稿用ポップアップモーダルの開閉
 function openPostComposeModal() {
@@ -321,33 +399,103 @@ function setupSnsEventListeners() {
     });
   }
 
-  // プロフィール設定フォーム送信ハンドラ
+  // 👁️ パスワード表示切替ハンドラ
+  const togglePassBtn = document.getElementById('toggleModalPasswordVisibility');
+  const modalPassInput = document.getElementById('modalPasscodeInput');
+  if (togglePassBtn && modalPassInput && !togglePassBtn.dataset.bound) {
+    togglePassBtn.dataset.bound = "true";
+    togglePassBtn.addEventListener('click', () => {
+      if (modalPassInput.type === 'password') {
+        modalPassInput.type = 'text';
+        togglePassBtn.textContent = '🙈';
+      } else {
+        modalPassInput.type = 'password';
+        togglePassBtn.textContent = '👁️';
+      }
+    });
+  }
+
+  // プロフィール設定フォーム送信ハンドラ (部内合言葉認証統合)
   if (profileForm && !profileForm.dataset.bound) {
     profileForm.dataset.bound = "true";
     profileForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const authorInput = document.getElementById('modalAuthorInput');
       const author = authorInput ? authorInput.value.trim() : '';
+      const passcodeInput = document.getElementById('modalPasscodeInput');
+      const passcodeError = document.getElementById('modalPasscodeErrorMsg');
+      const submitBtn = document.getElementById('profileSubmitBtn');
 
       if (!author) {
-        alert('表示名を入力してください');
+        alert('名前を入力してください');
+        if (authorInput) authorInput.focus();
         return;
       }
 
-      currentUser.author = author;
-      currentUser.avatar = pendingAvatarImage || '';
-      const modalTeamSelect = document.getElementById('modalTeamSelect');
-      if (modalTeamSelect) {
-        currentUser.team = modalTeamSelect.value;
-        localStorage.setItem('hope_user_team', currentUser.team);
+      const savedPass = localStorage.getItem('hope_app_passcode');
+      const isAuthSaved = savedPass === 'HoPE1968' || savedPass === 'HoPE_1968' || savedPass === 'HoPE1127';
+
+      // 未認証時はあいことばの照合を実施
+      if (!isAuthSaved) {
+        const rawPass = passcodeInput ? passcodeInput.value.trim() : '';
+        // 全角英数を半角英数に正規化し、大文字小文字の揺れも許容
+        const cleanPass = rawPass.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).trim();
+        const lowerPass = cleanPass.toLowerCase();
+
+        const isGeneral = (lowerPass === 'hope1968' || lowerPass === 'hope_1968');
+        const isAdmin = (lowerPass === 'hope1127');
+
+        if (!isGeneral && !isAdmin) {
+          if (passcodeError) passcodeError.textContent = 'あいことばが違います';
+          if (passcodeInput) {
+            passcodeInput.select();
+            passcodeInput.focus();
+          }
+          return;
+        }
+
+        if (passcodeError) passcodeError.textContent = '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = '認証中...';
+        }
+
+        // 幹部パスコード判定 & 正規化合言葉保存 (一般: HoPE1968, 幹部: HoPE1127)
+        const canonicalPass = isAdmin ? 'HoPE1127' : 'HoPE1968';
+        localStorage.setItem('hope_is_admin', isAdmin ? 'true' : 'false');
+        localStorage.setItem('hope_app_passcode', canonicalPass);
+
+        // Firebase 匿名認証実行
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+          firebase.auth().signInAnonymously().then(() => {
+            saveUserProfileData(author);
+            if (typeof startFirebaseSync === 'function') startFirebaseSync();
+            if (typeof updateAdminUI === 'function') updateAdminUI();
+            if (typeof updateEventModeUI === 'function') updateEventModeUI();
+            closeUserProfileModal();
+          }).catch((err) => {
+            console.error("Firebase Auth error:", err);
+            if (passcodeError) passcodeError.textContent = '認証エラー: ' + (err.message || '通信エラー');
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = '入室';
+            }
+          });
+          return;
+        } else {
+          saveUserProfileData(author);
+          if (typeof updateAdminUI === 'function') updateAdminUI();
+          if (typeof updateEventModeUI === 'function') updateEventModeUI();
+          closeUserProfileModal();
+          return;
+        }
       }
-      localStorage.setItem('hope_user_author', author);
-      localStorage.setItem('hope_user_avatar', currentUser.avatar);
 
-      updateUserProfileUI();
-
-      const modal = document.getElementById('userProfileModal');
-      if (modal) modal.classList.remove('active');
+      // 既に認証済みの場合
+      saveUserProfileData(author);
+      if (typeof updateAdminUI === 'function') updateAdminUI();
+      if (typeof updateEventModeUI === 'function') updateEventModeUI();
+      closeUserProfileModal();
     });
   }
 
@@ -406,12 +554,21 @@ function setupSnsEventListeners() {
   });
 }
 
+let isPostsSyncStarted = false;
+
 // データベース同期初期化
 function initPostsDatabase() {
   initPostsUser();
 
+  if (isPostsSyncStarted) return;
+
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+    if (firebase.auth && !firebase.auth().currentUser) {
+      loadPostsFromLocal();
+      return;
+    }
     try {
+      isPostsSyncStarted = true;
       firebaseDbPostsRef = firebase.database().ref('hope_webapp_posts');
       firebaseDbPostsRef.on('value', (snapshot) => {
         const val = snapshot.val();
@@ -425,11 +582,13 @@ function initPostsDatabase() {
         renderPostsTimeline();
       }, (err) => {
         console.warn("Firebase posts error:", err);
+        isPostsSyncStarted = false;
         loadPostsFromLocal();
       });
       return;
     } catch (e) {
       console.error("Firebase posts init error:", e);
+      isPostsSyncStarted = false;
     }
   }
   loadPostsFromLocal();

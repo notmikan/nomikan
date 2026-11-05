@@ -44,9 +44,17 @@ function loadInventoryItems() {
   initInventoryFirebase();
 }
 
+let isInventorySyncStarted = false;
+
 function initInventoryFirebase() {
+  if (isInventorySyncStarted) return;
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+    if (firebase.auth && !firebase.auth().currentUser) {
+      // まだ認証完了していない場合は待機（db.js 認証完了コールバックから再呼び出しされる）
+      return;
+    }
     try {
+      isInventorySyncStarted = true;
       firebaseDbInventoryRef = firebase.database().ref(FIREBASE_INVENTORY_KEY);
       firebaseDbInventoryRef.on('value', (snapshot) => {
         const val = snapshot.val();
@@ -60,9 +68,11 @@ function initInventoryFirebase() {
         renderInventory();
       }, (err) => {
         console.warn("Firebase inventory error:", err);
+        isInventorySyncStarted = false;
       });
     } catch (e) {
       console.error("Firebase inventory init error:", e);
+      isInventorySyncStarted = false;
     }
   }
 }

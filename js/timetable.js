@@ -56,7 +56,7 @@ function parseTodoDate(text, parentTask = null) {
   }
 
   const ymd = `${baseYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  // タイトルから日付表記と前後の余白を除去してスッキリ表示（「テスト」の「テ」が巻き込まれないよう修正）
+  // タイトルから日付表記と前後の余白を除去して表示
   const cleanTitle = text.replace(/(?:^|\s*)(\d{1,2})[/月\.\-](\d{1,2})日?(?:\s*|$)/, '').trim();
 
   return {
@@ -70,7 +70,7 @@ function parseTodoDate(text, parentTask = null) {
 }
 
 // 📋 カレンダーから直接ToDoの完了/未完了をワンクリック切り替え
-window.toggleTodoCalendarItem = function(taskId, todoId) {
+window.toggleTodoCalendarItem = function (taskId, todoId) {
   const task = currentTasks.find(t => t.id === taskId);
   if (!task || !task.todos) return;
 
@@ -102,10 +102,10 @@ function render() {
     const teamName = normalizeTeam(task.team);
     const filterName = normalizeTeam(currentTeamFilter);
     const matchTeam = currentTeamFilter === 'all' || teamName === filterName;
-    const matchQuery = !currentQuery || 
-                       task.name.includes(currentQuery) || 
-                       (task.assignee && task.assignee.includes(currentQuery)) || 
-                       (task.note && task.note.includes(currentQuery));
+    const matchQuery = !currentQuery ||
+      task.name.includes(currentQuery) ||
+      (task.assignee && task.assignee.includes(currentQuery)) ||
+      (task.note && task.note.includes(currentQuery));
     return matchTeam && matchQuery;
   });
 
@@ -210,16 +210,16 @@ function renderCompact(filteredTasks) {
         html += `
           <div class="gantt-dots-container" style="grid-column: ${col} / span 1;">
             ${mTasks.map(task => {
-              let dayText = '●';
-              let dateText = `${m}月`;
-              if (task.startDate) {
-                const d = new Date(task.startDate);
-                if (!isNaN(d.getTime())) {
-                  dayText = d.getDate();
-                  dateText = formatDateShort(task.startDate);
-                }
-              }
-              return `
+          let dayText = '●';
+          let dateText = `${m}月`;
+          if (task.startDate) {
+            const d = new Date(task.startDate);
+            if (!isNaN(d.getTime())) {
+              dayText = d.getDate();
+              dateText = formatDateShort(task.startDate);
+            }
+          }
+          return `
                 <div class="gantt-dot-badge bg-${normalizeTeam(task.team)}" 
                      onclick="event.stopPropagation(); openEditModalById('${task.id}')">
                   <span class="dot-day-num">${dayText}</span>
@@ -231,7 +231,7 @@ function renderCompact(filteredTasks) {
                   </div>
                 </div>
               `;
-            }).join('')}
+        }).join('')}
           </div>
         `;
       }
@@ -684,6 +684,7 @@ function bindInlineTodoInput(autoFocus = false) {
           completed: false
         });
         renderTodoList(true);
+        if (typeof triggerTaskAutoSave === 'function') triggerTaskAutoSave(true);
       }
     }
   });
@@ -703,13 +704,14 @@ function bindInlineTodoInput(autoFocus = false) {
           });
         });
         renderTodoList(true);
+        if (typeof triggerTaskAutoSave === 'function') triggerTaskAutoSave(true);
       }
     }
   });
 }
 
 // ✏️ ToDoテキストの直接インライン編集 (Notion風: クリックでinput化、Enter/blurで確定)
-window.startEditingTodo = function(idx, event) {
+window.startEditingTodo = function (idx, event) {
   if (event) event.stopPropagation();
   const textSpan = document.getElementById(`todoText_${idx}`);
   if (!textSpan || !currentTaskTodos[idx]) return;
@@ -727,6 +729,7 @@ window.startEditingTodo = function(idx, event) {
     const trimmed = newVal.trim();
     if (trimmed && trimmed !== currentText) {
       currentTaskTodos[idx].text = trimmed;
+      if (typeof triggerTaskAutoSave === 'function') triggerTaskAutoSave(true);
     }
     renderTodoList(false);
   };
@@ -751,16 +754,18 @@ window.startEditingTodo = function(idx, event) {
   input.select();
 };
 
-window.toggleTodoItem = function(idx) {
+window.toggleTodoItem = function (idx) {
   if (currentTaskTodos[idx]) {
     currentTaskTodos[idx].completed = !currentTaskTodos[idx].completed;
     renderTodoList(false);
+    if (typeof triggerTaskAutoSave === 'function') triggerTaskAutoSave(true);
   }
 };
 
-window.deleteTodoItem = function(idx) {
+window.deleteTodoItem = function (idx) {
   currentTaskTodos.splice(idx, 1);
   renderTodoList(false);
+  if (typeof triggerTaskAutoSave === 'function') triggerTaskAutoSave(true);
 };
 
 // 📋 他タスクからToDoをコピーする処理
@@ -818,6 +823,7 @@ function initCopyTodoFeature() {
 
     selectBar.style.display = 'none';
     renderTodoList(false);
+    if (typeof triggerTaskAutoSave === 'function') triggerTaskAutoSave(true);
   });
 }
 
@@ -896,7 +902,7 @@ function syncMonthsFromDates() {
 }
 
 // 🌟 タスク追加モーダル (直感作成 ＆ ユーザー情報自動補完)
-window.openAddTaskModal = function(options = {}) {
+window.openAddTaskModal = function (options = {}) {
   const form = document.getElementById('taskForm');
   if (form) form.reset();
 
@@ -905,6 +911,7 @@ window.openAddTaskModal = function(options = {}) {
   if (selectBar) selectBar.style.display = 'none';
   currentTaskTodos = [];
   renderTodoList();
+  if (typeof initTaskMembersState === 'function') initTaskMembersState({ isEvent: false, members: [] });
 
   // 👤 担当者自動補完: 保存済みのユーザー名
   const savedAuthor = localStorage.getItem('hope_user_author') || (typeof currentUser !== 'undefined' ? currentUser.author : '');
@@ -981,55 +988,40 @@ document.getElementById('taskEndDate')?.addEventListener('change', (e) => {
   }
 });
 
-function closeTaskModal() {
-  if (taskModal) taskModal.classList.remove('active');
-  document.getElementById('taskForm')?.reset();
-  currentTaskTodos = [];
+// 🔄 タスク詳細リアルタイム自動保存 (Notion/GoogleDocs風 オートセーブ)
+let taskAutoSaveTimer = null;
+
+function showTaskAutoSaveBadge() {
+  const badge = document.getElementById('taskAutoSaveBadge');
+  if (badge) {
+    badge.textContent = '✔ 保存済み';
+    badge.style.opacity = '1';
+    setTimeout(() => {
+      badge.style.opacity = '0';
+    }, 1800);
+  }
 }
 
-document.getElementById('closeModal')?.addEventListener('click', closeTaskModal);
-document.getElementById('cancelBtn')?.addEventListener('click', closeTaskModal);
+function saveTaskFromModal(closeAfterSave = false) {
+  const modal = document.getElementById('taskModal');
+  if (!modal || !modal.classList.contains('active')) return false;
 
-window.openEditModalById = function(id) {
-  const task = currentTasks.find(t => t.id === id);
-  if (!task || !taskModal) return;
+  const idInput = document.getElementById('taskId');
+  let id = idInput ? idInput.value : '';
+  const nameInput = document.getElementById('taskName');
+  const name = nameInput ? nameInput.value.trim() : '';
 
-  document.getElementById('taskId').value = task.id;
-  document.getElementById('taskTeam').value = task.team;
-  document.getElementById('taskName').value = task.name;
-  document.getElementById('taskAssignee').value = task.assignee;
-  document.getElementById('taskStartDate').value = task.startDate || '';
-  document.getElementById('taskEndDate').value = task.endDate || '';
+  // タスク名が空の場合は自動保存しない（新規追加の途中でキャンセルした場合など）
+  if (!name) return false;
 
-  const selectBar = document.getElementById('copyTodoSelectBar');
-  if (selectBar) selectBar.style.display = 'none';
+  // 新規タスクでIDがまだない場合は生成してセット
+  if (!id) {
+    id = String(Date.now());
+    if (idInput) idInput.value = id;
+  }
 
-  currentTaskTodos = task.todos ? JSON.parse(JSON.stringify(task.todos)) : [];
-  renderTodoList();
-
-  const hasSpecificDate = Boolean(task.startDate || task.endDate);
-  toggleDateMode(hasSpecificDate);
-
-  document.getElementById('taskStart').value = task.start;
-  document.getElementById('taskEnd').value = task.end;
-  document.getElementById('taskNote').value = task.note || '';
-
-  document.getElementById('modalTitle').textContent = 'タスク詳細';
-  document.getElementById('deleteModalBtn').style.display = 'inline-flex';
-  taskModal.classList.add('active');
-};
-
-document.getElementById('deleteModalBtn')?.addEventListener('click', () => {
-  const id = document.getElementById('taskId').value;
-  if (id) deleteTaskById(id);
-});
-
-document.getElementById('taskForm')?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const id = document.getElementById('taskId').value || String(Date.now());
-  const team = document.getElementById('taskTeam').value;
-  const name = document.getElementById('taskName').value.trim();
-  const assignee = document.getElementById('taskAssignee').value.trim() || '未定';
+  const team = document.getElementById('taskTeam')?.value || '運営';
+  const assignee = document.getElementById('taskAssignee')?.value.trim() || '未定';
 
   const completedCount = currentTaskTodos.filter(t => t.completed).length;
   const calculatedProgress = currentTaskTodos.length > 0 
@@ -1039,12 +1031,12 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
   const useSpecificDate = enableSpecificDateCheckbox ? enableSpecificDateCheckbox.checked : false;
   let startDate = '';
   let endDate = '';
-  let start = Number(document.getElementById('taskStart').value);
-  let end = Number(document.getElementById('taskEnd').value);
+  let start = Number(document.getElementById('taskStart')?.value || 8);
+  let end = Number(document.getElementById('taskEnd')?.value || 8);
 
   if (useSpecificDate) {
-    startDate = document.getElementById('taskStartDate').value;
-    endDate = document.getElementById('taskEndDate').value || startDate;
+    startDate = document.getElementById('taskStartDate')?.value || '';
+    endDate = document.getElementById('taskEndDate')?.value || startDate;
     if (startDate) {
       const sDate = new Date(startDate);
       if (!isNaN(sDate.getTime())) start = sDate.getMonth() + 1;
@@ -1055,10 +1047,14 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
     }
   }
 
-  const note = document.getElementById('taskNote').value.trim();
+  const note = document.getElementById('taskNote')?.value.trim() || '';
+
+  // 👥 参加メンバー & イベントフラグ同期
+  const members = (typeof getTaskMembersState === 'function') ? getTaskMembersState() : [];
+  const isEvent = (typeof getTaskIsEventState === 'function') ? getTaskIsEventState() : false;
 
   const existingIndex = currentTasks.findIndex(t => t.id === id);
-  const updatedTask = { id, team, name, assignee, progress: calculatedProgress, todos: [...currentTaskTodos], startDate, endDate, start, end, note };
+  const updatedTask = { id, team, name, assignee, progress: calculatedProgress, todos: [...currentTaskTodos], startDate, endDate, start, end, note, members, isEvent };
 
   let newTasks = [...currentTasks];
   if (existingIndex >= 0) {
@@ -1069,7 +1065,105 @@ document.getElementById('taskForm')?.addEventListener('submit', (e) => {
 
   currentTasks = newTasks;
   saveTasks(newTasks);
-  closeTaskModal();
+  showTaskAutoSaveBadge();
+
+  if (closeAfterSave) {
+    closeTaskModal(false);
+  }
+  return true;
+}
+
+window.saveTaskFromModal = saveTaskFromModal;
+
+window.triggerTaskAutoSave = function(immediate = false) {
+  if (taskAutoSaveTimer) {
+    clearTimeout(taskAutoSaveTimer);
+    taskAutoSaveTimer = null;
+  }
+  if (immediate) {
+    saveTaskFromModal(false);
+  } else {
+    taskAutoSaveTimer = setTimeout(() => {
+      saveTaskFromModal(false);
+    }, 400);
+  }
+};
+
+// 🌟 タスク詳細（編集）モーダル表示
+window.openEditModalById = function(id) {
+  const task = currentTasks.find(t => t.id === id);
+  if (!task || !taskModal) return;
+
+  document.getElementById('taskId').value = task.id;
+  document.getElementById('taskTeam').value = task.team || '運営';
+  document.getElementById('taskName').value = task.name || '';
+  document.getElementById('taskAssignee').value = task.assignee || '';
+  document.getElementById('taskStartDate').value = task.startDate || '';
+  document.getElementById('taskEndDate').value = task.endDate || '';
+
+  const selectBar = document.getElementById('copyTodoSelectBar');
+  if (selectBar) selectBar.style.display = 'none';
+
+  currentTaskTodos = task.todos ? JSON.parse(JSON.stringify(task.todos)) : [];
+  renderTodoList();
+  if (typeof initTaskMembersState === 'function') initTaskMembersState(task);
+
+  const hasSpecificDate = Boolean(task.startDate || task.endDate);
+  toggleDateMode(hasSpecificDate);
+
+  document.getElementById('taskStart').value = task.start || 8;
+  document.getElementById('taskEnd').value = task.end || 8;
+  document.getElementById('taskNote').value = task.note || '';
+
+  document.getElementById('modalTitle').textContent = 'タスク詳細';
+  const deleteBtn = document.getElementById('deleteModalBtn');
+  if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+  taskModal.classList.add('active');
+};
+
+document.getElementById('deleteModalBtn')?.addEventListener('click', () => {
+  const id = document.getElementById('taskId')?.value;
+  if (id && confirm('このタスクを削除しますか？')) {
+    deleteTaskById(id);
+    closeTaskModal(false);
+  }
+});
+
+function closeTaskModal(saveBeforeClose = true) {
+  if (saveBeforeClose) {
+    saveTaskFromModal(false);
+  }
+  if (taskModal) taskModal.classList.remove('active');
+  document.getElementById('taskForm')?.reset();
+  currentTaskTodos = [];
+}
+
+document.getElementById('closeModal')?.addEventListener('click', () => closeTaskModal(true));
+document.getElementById('cancelBtn')?.addEventListener('click', () => closeTaskModal(false));
+
+// モーダル背景（外枠）タップで保存して閉じる
+taskModal?.addEventListener('click', (e) => {
+  if (e.target === taskModal) {
+    closeTaskModal(true);
+  }
+});
+
+// 📝 入力フィールドの変更をリアルタイム検知してオートセーブ
+['taskName', 'taskAssignee', 'taskNote'].forEach(fieldId => {
+  document.getElementById(fieldId)?.addEventListener('input', () => {
+    triggerTaskAutoSave(false);
+  });
+});
+
+['taskTeam', 'taskStartDate', 'taskEndDate', 'taskStart', 'taskEnd', 'enableSpecificDate'].forEach(fieldId => {
+  document.getElementById(fieldId)?.addEventListener('change', () => {
+    triggerTaskAutoSave(true);
+  });
+});
+
+document.getElementById('taskForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  saveTaskFromModal(true);
 });
 
 // 🌐 年間 ⇔ 📆 月間 ビュー切り替えイベント
