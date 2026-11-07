@@ -73,18 +73,9 @@ function initMembersDatabase() {
           const sanitized = list.filter(Boolean).map(sanitizeMember);
           currentMembersList = sanitized;
           localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(currentMembersList));
-
-          // 不要なレガシーキー（linkedUserId, avatar, createdAt, lastActive等）があればクリーンアップ（※realNameは保持）
-          const hasLegacyKeys = list.some(m => m && ('linkedUserId' in m || 'avatar' in m || 'createdAt' in m || 'lastActive' in m));
-          if (hasLegacyKeys) {
-            firebaseDbMembersRef.set(sanitized);
-          }
-        } else {
-          // 初回 Firebase 側へ初期データを登録
-          firebaseDbMembersRef.set(currentMembersList);
         }
 
-        // 🌟 自己自動登録フェイルセーフ: ログイン中ユーザーがDBに無ければ自動で追加して保存
+        // 🌟 各部員がアプリを開いたとき、自分のデータだけを個別ノードに保存（全体上書きは絶対にしない！）
         const myName = localStorage.getItem('hope_user_author');
         const myTeam = localStorage.getItem('hope_user_team') || '運営';
         if (myName && myName.trim()) {
@@ -98,9 +89,7 @@ function initMembersDatabase() {
               grade: localStorage.getItem('hope_user_grade') || '',
               team: myTeam
             };
-            currentMembersList.push(myMember);
-            localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(currentMembersList));
-            firebaseDbMembersRef.set(currentMembersList);
+            saveSingleMemberToDb(myMember);
           } else if (matched.grade) {
             localStorage.setItem('hope_user_grade', matched.grade);
           }
@@ -117,9 +106,7 @@ function initMembersDatabase() {
 }
 
 /**
- * 👤 部員の自動登録 ＆ マルチデバイス（PC/スマホ）自動同期
- * - 既に名前が存在する場合: 登録済みの班・学年・本名を引き継ぎ、同じ人物として合流
- * - 新規部員の場合: 自動でDBに登録され、幹部の候補チップに即座に反映
+ * 👤 部員の自動登録 ＆ マルチデバイス（PC/スマホ）自動同期 (個別キー保存)
  */
 window.registerOrSyncMember = function(name, team = '運営') {
   if (!name) return null;
@@ -129,32 +116,38 @@ window.registerOrSyncMember = function(name, team = '運営') {
   let existing = currentMembersList.find(m => m.name === cleanName);
 
   if (existing) {
-    let modified = false;
     if (team && existing.team !== team) {
       existing.team = team;
-      modified = true;
-    }
-    if (modified) {
-      saveMembersToDb(currentMembersList);
+      saveSingleMemberToDb(existing);
     }
     return existing;
   } else {
     const newMember = {
       id: 'm_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       name: cleanName,
-      realName: '', // DBコンソールまたは幹部画面で手動設定可能
+      realName: '',
       grade: '',
       team: team || '運営'
     };
-    currentMembersList.push(newMember);
-    saveMembersToDb(currentMembersList);
+    saveSingleMemberToDb(newMember);
     renderTaskMembersUI();
     return newMember;
   }
 };
 
-function saveMembersToDb(newMembers) {
-  currentMembersList = newMembers.map(sanitizeMember).filter(Boolean);
+/**
+ * 🛡️ 単一メンバーの個別保存 (全体上書きを廃止し、対象メンバーのノードのみ安全に保存)
+ */
+function saveSingleMemberToDb(member) {
+  if (!member || !member.id) return;
+  const sanitized = sanitizeMember(member);
+
+  const idx = currentMembersList.findIndex(m => m.id === sanitized.id);
+  if (idx >= 0) {
+    currentMembersList[idx] = sanitized;
+  } else {
+    currentMembersList.push(sanitized);
+  }
   localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(currentMembersList));
 
   if (!firebaseDbMembersRef && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.database) {
@@ -166,7 +159,16 @@ function saveMembersToDb(newMembers) {
   }
 
   if (firebaseDbMembersRef) {
-    firebaseDbMembersRef.set(currentMembersList).catch(err => console.error("Save members error:", err));
+    firebaseDbMembersRef.child(sanitized.id).set(sanitized).catch(err => {
+      console.error("Save single member error:", err);
+    });
+  }
+}
+
+function saveMembersToDb(newMembers) {
+  // 互換用ラッパー: 個別に保存
+  if (Array.isArray(newMembers)) {
+    newMembers.forEach(m => saveSingleMemberToDb(m));
   }
 }
 
@@ -475,18 +477,18 @@ function renderMemberManagementTable() {
   `;
 }
 
-// 幹部による名簿更新
+// 幹部による名簿更新 (対象メンバーのみ個別保存)
 window.updateMemberRealName = function(idx, val) {
   if (currentMembersList[idx]) {
     currentMembersList[idx].realName = val.trim();
-    saveMembersToDb(currentMembersList);
+    saveSingleMemberToDb(currentMembersList[idx]);
   }
 };
 
 window.updateMemberGrade = function(idx, val) {
   if (currentMembersList[idx]) {
     currentMembersList[idx].grade = val.trim();
-    saveMembersToDb(currentMembersList);
+    saveSingleMemberToDb(currentMembersList[idx]);
     renderTaskMembersUI();
   }
 };
@@ -494,7 +496,7 @@ window.updateMemberGrade = function(idx, val) {
 window.updateMemberTeam = function(idx, val) {
   if (currentMembersList[idx]) {
     currentMembersList[idx].team = val;
-    saveMembersToDb(currentMembersList);
+    saveSingleMemberToDb(currentMembersList[idx]);
     renderTaskMembersUI();
   }
 };
@@ -503,8 +505,21 @@ window.deleteMemberFromDb = function(idx) {
   const member = currentMembersList[idx];
   if (!member) return;
   if (confirm(`「${member.name}」を名簿から削除しますか？`)) {
+    const memberId = member.id;
     currentMembersList.splice(idx, 1);
-    saveMembersToDb(currentMembersList);
+    localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(currentMembersList));
+
+    if (!firebaseDbMembersRef && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.database) {
+      try {
+        firebaseDbMembersRef = firebase.database().ref(FIREBASE_MEMBERS_KEY);
+      } catch (e) {
+        console.warn("Could not get firebaseDbMembersRef:", e);
+      }
+    }
+
+    if (firebaseDbMembersRef && memberId) {
+      firebaseDbMembersRef.child(memberId).remove().catch(err => console.error("Remove member error:", err));
+    }
     renderMemberManagementTable();
     renderTaskMembersUI();
   }
@@ -520,8 +535,7 @@ window.addNewMemberByAdmin = function(name, team, grade, realName = '') {
     grade: grade ? grade.trim() : '',
     team: team || '運営'
   };
-  currentMembersList.push(newMember);
-  saveMembersToDb(currentMembersList);
+  saveSingleMemberToDb(newMember);
   renderMemberManagementTable();
   renderTaskMembersUI();
 };

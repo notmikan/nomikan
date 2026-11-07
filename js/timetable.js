@@ -604,7 +604,130 @@ function renderMonthlyCalendar(filteredTasks) {
     </div>
   `;
 
-  grid.innerHTML = html;
+  const agendaHtml = renderCalendarAgendaHtml(filteredTasks, todayYMD);
+  grid.innerHTML = html + agendaHtml;
+}
+
+// 📋 カレンダー直下の「今日以降のタスク一覧（直近アジェンダ）」描画
+function renderCalendarAgendaHtml(filteredTasks, todayYMD) {
+  const todayDate = new Date(todayYMD);
+  const currentMonthNum = todayDate.getMonth() + 1;
+
+  function monthToFiscalOrder(m) {
+    const num = Number(m);
+    return num >= 8 ? num - 7 : num + 5;
+  }
+
+  // 「今日以降」または「現在進行中」のタスクを抽出
+  // 🌟 具体的な日付（startDate または endDate）が設定されているタスクのみを表示（日付なしの長期タスクは除外）
+  const upcomingTasks = filteredTasks.filter(task => {
+    const hasDate = Boolean(task.startDate || task.endDate);
+    if (!hasDate) return false;
+
+    if (task.startDate && task.endDate) {
+      return task.endDate >= todayYMD;
+    } else if (task.startDate) {
+      return task.startDate >= todayYMD;
+    } else if (task.endDate) {
+      return task.endDate >= todayYMD;
+    }
+    return false;
+  });
+
+  // 時系列昇順ソート（今日に近い順）
+  upcomingTasks.sort((a, b) => {
+    const dateA = a.startDate || a.endDate;
+    const dateB = b.startDate || b.endDate;
+    return dateA.localeCompare(dateB);
+  });
+
+  // 月ごとにグループ化
+  const groups = new Map();
+  upcomingTasks.forEach(task => {
+    let m = task.start;
+    let yearPrefix = '';
+    if (task.startDate) {
+      const d = new Date(task.startDate);
+      if (!isNaN(d.getTime())) {
+        m = d.getMonth() + 1;
+        yearPrefix = `${d.getFullYear()}年 `;
+      }
+    }
+    const groupKey = `${m}月`;
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, { month: m, yearPrefix, tasks: [] });
+    }
+    groups.get(groupKey).tasks.push(task);
+  });
+
+  let itemsHtml = '';
+  if (upcomingTasks.length === 0) {
+    itemsHtml = `
+      <div style="padding: 24px 16px; text-align: center; color: #94a3b8; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; font-size: 13px;">
+        今日以降の予定はありません。「＋ タスク追加」から新しく追加できます。
+      </div>
+    `;
+  } else {
+    itemsHtml = `<div class="timeline-smart-container">`;
+    groups.forEach((group, groupKey) => {
+      itemsHtml += `
+        <div class="timeline-month-section">
+          <div class="timeline-month-header">
+            <div class="timeline-month-pill">${groupKey}</div>
+          </div>
+          <div class="timeline-items-list">
+      `;
+
+      group.tasks.forEach(task => {
+        const teamName = normalizeTeam(task.team);
+        const isPeriod = Boolean(task.startDate && task.endDate && task.startDate !== task.endDate);
+        const dateText = (task.startDate && task.endDate)
+          ? (isPeriod ? `${formatDateShort(task.startDate)} 〜 ${formatDateShort(task.endDate)}` : formatDateShort(task.startDate))
+          : `${task.start}月 〜 ${task.end}月`;
+
+        const todos = task.todos || [];
+        const totalCount = todos.length;
+        const completedCount = todos.filter(t => t.completed).length;
+        const isAllCompleted = totalCount > 0 && completedCount === totalCount;
+        const countLabel = totalCount > 0 ? `(${completedCount}/${totalCount})` : '';
+
+        // 参加者数
+        const memberCount = (task.members && Array.isArray(task.members)) ? task.members.length : 0;
+        const showTeamBadge = (currentTeamFilter === 'all');
+
+        itemsHtml += `
+          <div class="timeline-item team-item-${teamName}" onclick="openEditModalById('${task.id}')" title="クリックして詳細・ToDo">
+            <div class="timeline-item-node"></div>
+            <div class="timeline-item-date">${dateText}</div>
+            <div class="timeline-item-body">
+              <div class="timeline-item-title-row">
+                <span class="timeline-item-title">${escapeHtml(task.name)}</span>
+                ${showTeamBadge ? `<span class="badge badge-${teamName}" style="font-size: 10px; padding: 1px 6px;">${teamName}</span>` : ''}
+                ${memberCount > 0 ? `<span style="font-size: 11px; color: #475569; font-weight: 600; margin-left: 6px;">👥 ${memberCount}名参加</span>` : ''}
+              </div>
+              ${task.note ? `<div class="timeline-item-note">📝 ${escapeHtml(task.note)}</div>` : ''}
+            </div>
+            <div class="timeline-item-meta">
+              ${task.assignee ? `<span class="timeline-item-assignee">👤 ${escapeHtml(task.assignee)}</span>` : ''}
+              ${isAllCompleted ? `<span class="timeline-item-status completed">✓ 完了 ${countLabel}</span>` : (totalCount > 0 ? `<span style="font-size: 11px; font-weight: 600; color: #64748b; font-feature-settings: 'tnum';">${countLabel}</span>` : '')}
+            </div>
+          </div>
+        `;
+      });
+
+      itemsHtml += `
+          </div>
+        </div>
+      `;
+    });
+    itemsHtml += `</div>`;
+  }
+
+  return `
+    <div class="calendar-agenda-wrapper" style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+      ${itemsHtml}
+    </div>
+  `;
 }
 
 // ユーティリティ: HTMLエスケープ

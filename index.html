@@ -37,7 +37,8 @@
     <div class="header-brand">
       <h1 class="app-title"><img src="icon.webp" alt="HoPE" class="app-logo-img" width="24" height="24"
           style="width: 24px; height: 24px; max-width: 24px; max-height: 24px; object-fit: contain; flex-shrink: 0;">
-        <span>HoPE</span></h1>
+        <span>HoPE</span>
+      </h1>
       <nav class="app-tabs">
         <button class="nav-tab active" data-tab="timetable">スケジュール</button>
         <button class="nav-tab" data-tab="home">チャット</button>
@@ -82,7 +83,8 @@
       <div class="schedule-top-bar">
         <div class="month-nav-controls" id="monthNavToolbar">
           <button type="button" class="month-nav-btn" id="prevMonthBtn" title="前月">◀</button>
-          <span class="month-nav-label" id="currentMonthLabel" title="クリックで今月に戻る" style="cursor: pointer;">2026年 11月</span>
+          <span class="month-nav-label" id="currentMonthLabel" title="クリックで今月に戻る" style="cursor: pointer;">2026年
+            11月</span>
           <button type="button" class="month-nav-btn" id="nextMonthBtn" title="次月">▶</button>
         </div>
 
@@ -159,7 +161,9 @@
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <div class="modal-title" id="modalTitle">タスク詳細</div>
-          <span id="taskAutoSaveBadge" style="font-size: 11px; font-weight: 600; color: #10b981; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 9999px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">✔ 自動保存済み</span>
+          <span id="taskAutoSaveBadge"
+            style="font-size: 11px; font-weight: 600; color: #10b981; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 9999px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">✔
+            自動保存済み</span>
         </div>
         <button type="button" class="action-btn" id="closeModal">✕</button>
       </div>
@@ -253,9 +257,12 @@
             </div>
 
             <!-- 👑 幹部専用: 参加者を募集するイベント切替チェック -->
-            <div id="taskEventModeToggleWrap" style="margin-top: 10px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: none;">
-              <label class="checkbox-label" style="font-size: 12px; font-weight: 700; color: #0f172a; cursor: pointer; margin-bottom: 0;">
-                <input type="checkbox" id="taskIsEventCheckbox" style="accent-color: #0f172a; cursor: pointer;"> 👥 参加者を募集する（イベント）
+            <div id="taskEventModeToggleWrap"
+              style="margin-top: 10px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: none;">
+              <label class="checkbox-label"
+                style="font-size: 12px; font-weight: 700; color: #0f172a; cursor: pointer; margin-bottom: 0;">
+                <input type="checkbox" id="taskIsEventCheckbox" style="accent-color: #0f172a; cursor: pointer;"> 👥
+                参加者を募集する（イベント）
               </label>
             </div>
 
@@ -263,9 +270,11 @@
             <div class="form-group" style="margin-top: 12px; display: none;" id="taskMembersSection">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <label style="margin-bottom: 0; font-weight: 700; color: #0f172a; font-size: 13px;">
-                  参加者 <span id="taskMemberCountBadge" style="font-size: 11px; font-weight: 600; color: #64748b;">(0名)</span>
+                  参加者 <span id="taskMemberCountBadge"
+                    style="font-size: 11px; font-weight: 600; color: #64748b;">(0名)</span>
                 </label>
-                <button type="button" id="copyTaskMemberListBtn" class="btn-copy-todo" style="font-size: 11px; padding: 2px 8px;" title="名簿テキストをコピー">
+                <button type="button" id="copyTaskMemberListBtn" class="btn-copy-todo"
+                  style="font-size: 11px; padding: 2px 8px;" title="名簿テキストをコピー">
                   📋 名簿コピー
                 </button>
               </div>
@@ -283,7 +292,8 @@
               </div>
 
               <!-- 【幹部専用】 メンバー追加エリア -->
-              <div id="taskAdminAddMemberArea" style="margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
+              <div id="taskAdminAddMemberArea"
+                style="margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                   <span style="font-size: 11px; font-weight: 700; color: #475569;">参加者を追加</span>
                   <!-- 班絞り込みタブ -->
@@ -309,7 +319,8 @@
             <div class="form-group" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <label style="margin-bottom: 0; font-weight: 700; color: #0f172a; font-size: 13px;">
-                  ToDoリスト <span id="taskTodoCountText" style="font-size: 11px; font-weight: 600; color: #64748b; margin-left: 4px;"></span>
+                  ToDoリスト <span id="taskTodoCountText"
+                    style="font-size: 11px; font-weight: 600; color: #64748b; margin-left: 4px;"></span>
                 </label>
                 <button type="button" id="copyTodoFromTaskBtn" class="btn-copy-todo" title="他のタスクからToDo手順を一括コピー">
                   他タスクからコピー
@@ -403,8 +414,10 @@
         <div class="form-group" id="modalPasscodeGroup">
           <label>あいことば</label>
           <div class="passcode-input-wrap">
-            <input type="password" id="modalPasscodeInput" class="form-control" placeholder="あいことば" autocomplete="current-password">
-            <button type="button" class="btn-toggle-password" id="toggleModalPasswordVisibility" title="表示切替">👁️</button>
+            <input type="password" id="modalPasscodeInput" class="form-control" placeholder="あいことば"
+              autocomplete="current-password">
+            <button type="button" class="btn-toggle-password" id="toggleModalPasswordVisibility"
+              title="表示切替">👁️</button>
           </div>
           <div class="passcode-error-msg" id="modalPasscodeErrorMsg"></div>
         </div>
@@ -414,15 +427,19 @@
         </div>
 
         <!-- 幹部用メニュー (幹部入室時かつプロフィール編集時のみ表示) -->
-        <div id="modalAdminArea" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: none;">
-          <button type="button" class="btn btn-secondary btn-sm" id="openMemberLinkModalBtn" style="width: 100%; font-size: 12px;">
+        <div id="modalAdminArea"
+          style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: none;">
+          <button type="button" class="btn btn-secondary btn-sm" id="openMemberLinkModalBtn"
+            style="width: 100%; font-size: 12px;">
             👥 部員名簿管理
           </button>
         </div>
 
         <!-- 認証解除（設定変更時のみ表示） -->
-        <div id="modalLogoutWrap" style="margin-top: 18px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center; display: none;">
-          <button type="button" class="btn-link-sm" onclick="logoutAppAuth()" style="color: #ef4444; font-size: 12px; font-weight: 500; cursor: pointer; background: none; border: none;">
+        <div id="modalLogoutWrap"
+          style="margin-top: 18px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center; display: none;">
+          <button type="button" class="btn-link-sm" onclick="logoutAppAuth()"
+            style="color: #ef4444; font-size: 12px; font-weight: 500; cursor: pointer; background: none; border: none;">
             🚪 部内認証を解除（ログアウト）
           </button>
         </div>
@@ -442,22 +459,28 @@
       </p>
 
       <!-- 幹部による手動追加フォーム -->
-      <div style="display: flex; gap: 6px; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;">
-        <input type="text" id="adminNewMemberName" placeholder="名前" style="flex: 2; padding: 4px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
-        <input type="text" id="adminNewMemberGrade" placeholder="学年 (例: 2年)" style="flex: 1; padding: 4px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
-        <select id="adminNewMemberTeam" style="flex: 1; padding: 4px 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+      <div
+        style="display: flex; gap: 6px; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;">
+        <input type="text" id="adminNewMemberName" placeholder="名前"
+          style="flex: 2; padding: 4px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <input type="text" id="adminNewMemberGrade" placeholder="学年 (例: 2年)"
+          style="flex: 1; padding: 4px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <select id="adminNewMemberTeam"
+          style="flex: 1; padding: 4px 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
           <option value="運営">運営</option>
           <option value="FRP">FRP</option>
           <option value="翼">翼</option>
           <option value="コクピ">コクピ</option>
           <option value="電装">電装</option>
         </select>
-        <button type="button" id="adminAddMemberSubmitBtn" class="btn btn-primary btn-sm" style="font-size: 11px; padding: 5px 10px; white-space: nowrap;">
+        <button type="button" id="adminAddMemberSubmitBtn" class="btn btn-primary btn-sm"
+          style="font-size: 11px; padding: 5px 10px; white-space: nowrap;">
           追加
         </button>
       </div>
 
-      <div id="memberLinkTableContainer" style="max-height: 340px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <div id="memberLinkTableContainer"
+        style="max-height: 340px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
         <!-- JSで部員一覧テーブルを描画 -->
       </div>
 
@@ -660,14 +683,14 @@
   </div>
 
   <!-- モジュールJavaScriptの読み込み (キャッシュバスター付与) -->
-  <script src="js/config.js?v=2004"></script>
-  <script src="js/db.js?v=2004"></script>
-  <script src="js/members.js?v=2004"></script>
-  <script src="js/home.js?v=2004"></script>
-  <script src="js/timetable.js?v=2004"></script>
-  <script src="js/sns.js?v=2004"></script>
-  <script src="js/inventory.js?v=2004"></script>
-  <script src="js/main.js?v=2004"></script>
+  <script src="js/config.js?v=2008"></script>
+  <script src="js/db.js?v=2008"></script>
+  <script src="js/members.js?v=2008"></script>
+  <script src="js/home.js?v=2008"></script>
+  <script src="js/timetable.js?v=2008"></script>
+  <script src="js/sns.js?v=2008"></script>
+  <script src="js/inventory.js?v=2008"></script>
+  <script src="js/main.js?v=2008"></script>
 </body>
 
 </html>
